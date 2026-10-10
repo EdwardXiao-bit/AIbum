@@ -42,6 +42,19 @@
        5.8 批量删除 DELETE（先确认）        5.9 部分失败：计数 + 中断 + "已处理 N 张；错误"
        5.10 busy 期间禁止重入
 
+     第 4 节 上传（阶段 3.4；引擎在 views/upload.js，队列 DOM 在 components/upload-queue.js）
+       4.1  上传一律走 XHR        → api.upload（唯一请求出口；本文件不许 new XMLHttpRequest）
+       4.2  逐张串行 + 总体进度    → uploader.startBatch → runItems
+       4.3  目标相册              → **Q2 默认值：上传前显式选择，默认「未归入相册」**
+       4.4  单张 >20 MiB 逐个报错  → uploader 的 validateFile 分支（跳过这一张，不拒绝整批）
+       4.5  账户变了立即停止       → 每张开始前比对 owner；api.upload 的 stale 分支兜传输途中
+       4.6  响应 duplicate 计重复  → markDone(item, true)
+       4.7  完成通知（最多 3 条）   → upload.completionNotice（逐字对齐旧版）
+       4.8  上传期间锁定           → store.setUploading（顶栏登出/账户安全由 app.js 订阅后禁用）
+       4.9  完成后刷新选项/列表/健康 → onSettled → refreshAll()
+       4.10 进度文案               → queue.setLabel(`上传 i/总数：文件名`)
+       本卡新增：全页拖放（v6 拖入整页高亮）+ 上传队列（每张一行 + 失败可单独重试）
+
      第 9 节 系统状态（本卡负责，见文件末尾的健康轮询）
        9.1 4 秒一次、页面隐藏时暂停
        9.2 状态文案
@@ -58,6 +71,8 @@ import * as router from '../router.js';
 import * as store from '../store.js';
 import { h, setText } from '../components/dom.js';
 import { createPhotoCard } from '../components/photo-card.js';
+import { createUploadQueue } from '../components/upload-queue.js';
+import { createUploadDialog, createUploader } from './upload.js';
 
 /** 列表每页条数：后端 page_size 默认 40、上限 100（app/main.py L393）。 */
 export const PAGE_SIZE = 40;
@@ -129,7 +144,6 @@ export function createLibraryView(options = {}) {
   /** @type {{kind:'text'|'image', text:string, file:File|null, similarId:string|null}} */
   let queryIntent = null;
   let searching = false;
-  let uploading = false;
   let healthBusy = false;
   /** 上次"因计数变化而自动重载列表"的时间（Q4 节流）。 */
   let lastAutoReloadAt = 0;
@@ -317,24 +331,115 @@ export function createLibraryView(options = {}) {
     h('div', { className: 'library__tail' }, [loadMore]),
   ]);
 
-  const toastHost = h('div', { className: 'library__inline-note', 'data-role': 'upload-status', hidden: true }, [
-    h('span', { 'data-role': 'upload-label' }),
-    h('progress', { className: 'progress', id: 'progress', max: '100', value: '0' }),
-  ]);
-  const uploadButton = h('button', { className: 'btn btn--ghost', id: 'upload', type: 'button', text: '上传照片' });
+  /* ---------------- 上传：投递区 + 队列（第 4 节；新增全页拖放） ---------------- */
+
+  const dropPromptUpload = h('span', { className: 'upload__title', text: '把照片拖到这里，或点击选择' });
+  const dropSub = h('span', { className: 'upload__sub', text: 'JPG / PNG / WebP，单张不超过 20 MiB；也可以直接拖到页面任意位置' });
   const uploadInput = h('input', {
     className: 'sr-only', id: 'upload-input', type: 'file', multiple: true,
     accept: 'image/jpeg,image/png,image/webp', 'data-role': 'upload-input',
   });
+  const uploadZone = h('div', {
+    className: 'upload__zone upload__zone--compact', id: 'upload-zone', role: 'button', tabindex: '0',
+    'aria-label': '上传照片：点击选择，或把文件拖到此处', 'data-role': 'upload-zone',
+  }, [
+    h('span', { className: 'upload__icon', 'aria-hidden': 'true', text: '⬆' }),
+    h('span', { className: 'upload__text' }, [dropPromptUpload, dropSub]),
+    uploadInput,
+  ]);
+  const uploadButton = h('button', { className: 'btn btn--ghost', id: 'upload', type: 'button', text: '选择照片…' });
+
+  /** 本批的目标相册（Q2：显式选择；null = 未归入相册）。 */
+  const uploadTarget = { albumId: null, name: '' };
+  /** 等待用户确认相册的那一批文件。 */
+  let pendingFiles = [];
+
+  /**
+   * 队列视图（components/upload-queue.js）。把三个用户动作接回上传器：
+   *   · 重试（本卡新增：失败项单独重试）—— 只有 error 行才出现
+   *   · 移除（放弃这一张）
+   *   · 清空已完成（只留失败项，便于连续重试）
+   * 注意 uploader 在下面才建 → 用箭头函数延迟解引用。
+   */
+  const uploadQueue = createUploadQueue({
+    document: document_,
+    onRetry: id => { uploader.retry(id).catch(error => store.toast(error && error.message ? error.message : String(error))); },
+    onRemove: id => {
+      if (store.isUploading()) return;
+      uploader.remove(id);
+    },
+    onClearFinished: () => { if (!store.isUploading()) uploader.clearFinished(); },
+  });
+
+  /** 上传器：4.1–4.7 的引擎（XHR / 串行 / 进度 / duplicate / 完成通知）。 */
+  const uploader = createUploader({
+    queue: uploadQueue,
+    onStart: () => {
+      uploadQueue.setAlbumName(uploadTarget.albumId ? `目标相册：${uploadTarget.name}` : '目标相册：未归入相册');
+      uploadZone.dataset.state = 'busy';
+      uploadZone.setAttribute('aria-busy', 'true');
+    },
+    onSettled: store.guard(async () => {
+      // 4.9 完成后刷新：相册/标签选项 + 重载列表 + 健康状态（旧版 L201 同此）
+      uploadZone.dataset.state = 'idle';
+      uploadZone.removeAttribute('aria-busy');
+      await refreshAll();
+    }),
+  });
+
+  const uploadPanel = h('div', { className: 'library__upload-wrap', 'data-role': 'upload-panel' }, [
+    h('div', { className: 'library__upload-foot' }, [uploadButton, uploadZone]),
+    uploadQueue.element,
+  ]);
+
+  /**
+   * 全页拖放遮罩（本卡新增）。拖文件进窗口 → **整页高亮**；
+   * 拖到页面任意位置松手都进上传队列（旧版只 preventDefault，没有真拖放）。
+   * 用视口固定的浮层 + 虚线内框，`pointer-events: none` 保证 drop 事件仍落到页面。
+   */
+  const dropzoneOverlay = h('div', {
+    className: 'dropzone', id: 'dropzone', hidden: true, 'data-role': 'dropzone', 'aria-hidden': 'true',
+  }, [
+    h('div', { className: 'dropzone__card' }, [
+      h('p', { className: 'dropzone__title', text: '松手即可上传' }),
+      h('p', { className: 'dropzone__sub', text: '照片会进入上传队列，逐张上传；重复的照片会被自动识别。' }),
+    ]),
+  ]);
+
+  /** 上传前的"归入哪个相册"对话框（复用外壳的共享遮罩）。相册选项由 renderAlbumOptions 填。 */
+  const uploadDialog = createUploadDialog({
+    albums: [],
+    document: document_,
+    onConfirm: (albumId, files) => {
+      if (modals) modals.close(uploadDialogNode);
+      startUpload(albumId, files);
+    },
+  });
+  const uploadDialogNode = h('div', {
+    className: 'dialog', id: 'dialog-upload', role: 'dialog', 'aria-modal': 'true',
+    'aria-labelledby': 'upload-dialog-title', hidden: true, 'data-role': 'upload-dialog',
+  }, [
+    h('div', { className: 'dialog__head' }, [
+      h('div', {}, [
+        h('div', { className: 'dialog__title', id: 'upload-dialog-title', text: '上传照片' }),
+        h('div', { className: 'dialog__sub', text: '逐张上传，完成后会给出汇总。' }),
+      ]),
+      h('button', { className: 'btn btn--icon btn--ghost dialog__close', type: 'button', 'data-close': '', 'aria-label': '关闭', text: '✕' }),
+    ]),
+    uploadDialog.form,
+  ]);
+  if (modals) modals.register(uploadDialogNode, { onClose: () => { pendingFiles = []; } });
+
   const main = h('div', { className: 'library__main' }, [
     results,
-    h('div', { className: 'library__main-foot' }, [uploadButton, uploadInput, toastHost]),
+    uploadPanel,
   ]);
 
   const root = h('div', { className: 'library', id: 'library-root', 'data-role': 'library' }, [
     hero,
     h('div', { className: 'library__toolbar' }, [filtersToggle, modelStatus]),
     h('div', { className: 'library__body' }, [sidebar, main]),
+    dropzoneOverlay,
   ]);
 
   /* ---------------- 浮层：新建相册 / 删除确认（用外壳的共享遮罩，见 components/modal.js） ---------------- */
@@ -370,7 +475,7 @@ export function createLibraryView(options = {}) {
 
   // 浮层放进视图根节点（不是 document.body）：视图卸载时跟着一起消失，
   // 不在 DOM 里留孤儿对话框。.dialog 是 position:fixed，挂在哪儿都不影响布局。
-  root.append(dialog);
+  root.append(dialog, uploadDialogNode);
 
   const nodes = {
     root, hero, searchForm, searchInput, referenceInput, referencePreview, referenceName, referenceInfo,
@@ -378,8 +483,13 @@ export function createLibraryView(options = {}) {
     sidebar, sidebarToggle: filtersToggle, filtersToggle, albumFilter, locationFilter, startFilter, endFilter,
     favoriteFilter, orderSelect, tagKeyword, tagCloud, clearTagsButton, clearFiltersButton, newAlbumButton, filterCount,
     resultLabel, searchSummary, selectAll, selectedCount, batchBar, batchFavorite, batchMove, batchDelete, batchAlbum,
-    grid, emptyNode, emptyTitle, emptyDesc, loadMore, uploadButton, uploadInput, uploadStatus: toastHost,
-    progress: toastHost.querySelector('#progress'), uploadLabel: toastHost.querySelector('[data-role="upload-label"]'),
+    grid, emptyNode, emptyTitle, emptyDesc, loadMore,
+    // 上传（第 4 节）：投递区 / 文件输入 / 队列表 / 队列面板 / 全页拖放遮罩 / 选相册对话框
+    uploadButton, uploadInput, uploadZone, uploadPanel, uploadQueue, uploader,
+    uploadStatus: uploadQueue.element,
+    progress: uploadQueue.element.querySelector('[data-role="upload-progress"]'),
+    uploadLabel: uploadQueue.element.querySelector('[data-role="upload-label"]'),
+    dropzone: dropzoneOverlay, uploadDialog: uploadDialogNode, uploadForm: uploadDialog.form,
     dialog, albumForm, albumName, deleteForm, deleteMessage,
   };
 
@@ -402,6 +512,11 @@ export function createLibraryView(options = {}) {
 
   function isSearchMode(state = store.getState()) {
     return state.results.mode === 'search' || state.results.mode === 'similar';
+  }
+
+  /** 是否在上传（4.8 判据）：本地跑批 + 全局标记，两者取或，避免任一处漏改。 */
+  function uploadBusy() {
+    return Boolean(uploader.running || store.isUploading());
   }
 
   function overlayOpen() {
@@ -588,6 +703,10 @@ export function createLibraryView(options = {}) {
       renderAlbumOptions();
       renderTagCloud(state);
     }
+    // 4.8：上传期间锁定（上传输入框在这里；顶栏的登出/账户安全由 app.js 订阅同一个标记）
+    const busy = uploadBusy();
+    uploadInput.disabled = busy;
+    uploadZone.setAttribute('aria-disabled', busy ? 'true' : 'false');
   }
 
   /* ======================================================================
@@ -822,6 +941,7 @@ export function createLibraryView(options = {}) {
     const state = store.getState();
     fillAlbumSelect(albumFilter, albums, '所有相册', state.filters.album_id || '');
     fillAlbumSelect(batchAlbum, albums, '移出相册');
+    fillAlbumSelect(uploadDialog.select, albums, '未归入相册');
   }
 
   async function refreshOptions() {
@@ -922,52 +1042,64 @@ export function createLibraryView(options = {}) {
   }
 
   /* ======================================================================
-     8) 上传（→ F6 卡片；本卡只给一个最小入口，接 api.upload 的进度回调）
+     8) 上传（第 4 节，阶段 3.4）
+     ----------------------------------------------------------------------
+     分工：
+       views/upload.js                 引擎（XHR / 串行 / 进度 / duplicate / 完成通知）
+       components/upload-queue.js      队列 DOM（每行状态 + 重试）
+       本节                            入口编排：全页拖放 → 选相册 → 起批次
      ====================================================================== */
 
-  async function onUpload(files) {
-    const list = [...files];
-    if (!list.length || uploading) return;
-    const state = store.getState();
-    const owner = state.user && state.user.id;
-    const album = state.filters.album_id || null;
-    uploading = true;
-    nodes.uploadStatus.hidden = false;
-    uploadButton.disabled = true;
-    let ok = 0;
-    let duplicate = 0;
-    const errors = [];
+  /**
+   * 上传前的显式相册选择（Q2 默认实现）。
+   * 旧版隐式沿用"当前相册筛选值"，用户不一定意识到筛选会改变上传目标；
+   * 这里把选择摆到台面上，默认「未归入相册」。
+   */
+  function openUploadDialog(files) {
+    pendingFiles = [...(files || [])];
+    uploadDialog.select.value = '';
+    uploadDialog.setFiles(pendingFiles);
+    if (modals) modals.open(uploadDialogNode);
+  }
+
+  /**
+   * 起一批上传。albumId 来自对话框（null = 未归入相册）。
+   * 注意：**不再沿用筛选里的相册**（Q2 按默认值改掉了旧行为）。
+   */
+  async function startUpload(albumId, files) {
+    const list = [...(files || pendingFiles || [])];
+    pendingFiles = [];
+    uploadDialog.setFiles([]);
+    if (!list.length) return;
+    uploadTarget.albumId = albumId || null;
+    uploadTarget.name = albumId
+      ? ((albums.find(album => album.id === albumId) || {}).name || '所选相册')
+      : '';
+    uploadQueue.setActive(true);
     try {
-      for (let index = 0; index < list.length; index += 1) {
-        const file = list[index];
-        setText(nodes.uploadLabel, `上传 ${index + 1}/${list.length}：${file.name}`);
-        try {
-          if (file.size > MAX_REFERENCE_BYTES) throw new Error('超过 20 MiB');
-          const form = new FormData();
-          form.set('file', file);
-          if (album) form.set('album_id', album);
-          const result = await api.upload('/photos', form, {
-            onProgress: fraction => { nodes.progress.value = ((index + fraction) / list.length) * 100; },
-          });
-          ok += 1;
-          if (result && result.duplicate) duplicate += 1;
-        } catch (error) {
-          errors.push(`${file.name}：${error && error.message ? error.message : String(error)}`);
-        }
-        if (!store.getState().user || store.getState().user.id !== owner) break;   // 4.5
-      }
-      nodes.progress.value = 100;
-      store.toast(`完成 ${ok}/${list.length} 张，重复 ${duplicate} 张。${errors.slice(0, 3).join('；')}`);
-      await refreshOptions();
-      await fetchBrowse();
-      await updateHealth({ force: true });
+      await uploader.startBatch(list, { albumId: uploadTarget.albumId });
     } finally {
-      uploading = false;
-      uploadButton.disabled = false;
-      uploadInput.value = '';
-      nodes.uploadStatus.hidden = true;
+      uploadInput.value = '';       // 同一批文件可以再次选择（重传要能触发 change）
     }
   }
+
+  /** 过滤掉明显不是图片的东西，并给出可解释的中文提示（不是静默忽略）。 */
+  function pickImageFiles(fileList, { allowMultiple = true } = {}) {
+    const all = [...(fileList || [])];
+    if (!all.length) return [];
+    const images = all.filter(file => !file.type || /^image\//i.test(file.type));
+    if (images.length !== all.length) {
+      store.toast(`已忽略 ${all.length - images.length} 个非图片文件`);
+    }
+    return allowMultiple ? images : images.slice(0, 1);
+  }
+
+  /** 4.10 的文案在 uploader 里拼；这里只负责把"提交"这件事接起来。 */
+  const onUpload = store.guard(files => {
+    const list = pickImageFiles(files);
+    if (!list.length) return;
+    openUploadDialog(list);
+  });
 
   /* ======================================================================
      9) 健康轮询（9.1 - 9.4）+ 计数变化自动重载（Q4 节流）
@@ -978,7 +1110,7 @@ export function createLibraryView(options = {}) {
     if (document_.hidden) return false;
     if (state.selected.size) return false;                  // 有选中项 → 不重载（别把选中项弄丢）
     if (isSearchMode(state)) return false;                  // 正在看检索结果 → 不重载
-    if (searching || uploading || state.busy) return false;
+    if (uploadBusy() || searching || state.busy) return false;
     if (overlayOpen()) return false;
     if (state.view !== 'library') return false;
     return true;
@@ -1045,7 +1177,7 @@ export function createLibraryView(options = {}) {
       if (state.selected.size) return 'selection';
       if (isSearchMode(state)) return 'search-mode';
       if (searching) return 'searching';
-      if (uploading) return 'uploading';
+      if (uploadBusy()) return 'uploading';
       if (state.busy) return 'busy';
       if (overlayOpen()) return 'overlay';
       if (state.view !== 'library') return 'view';
@@ -1087,14 +1219,18 @@ export function createLibraryView(options = {}) {
     }
   });
   dropZone.addEventListener('dragover', event => {
+    // 拖的是文件时由**全页拖放**接管（否则两个高亮同时亮，用户不知道会传到哪）
+    if (hasDroppableFiles(event.dataTransfer)) return;
     event.preventDefault();
     event.dataTransfer.dropEffect = 'copy';
     dropZone.dataset.drag = 'true';
   });
   dropZone.addEventListener('dragleave', event => {
+    if (hasDroppableFiles(event.dataTransfer)) return;
     if (!dropZone.contains(event.relatedTarget)) dropZone.dataset.drag = 'false';
   });
   dropZone.addEventListener('drop', store.guard(event => {
+    if (hasDroppableFiles(event.dataTransfer)) return;   // 交给全页拖放
     event.preventDefault();
     dropZone.dataset.drag = 'false';
     const files = [...event.dataTransfer.files];
@@ -1201,9 +1337,75 @@ export function createLibraryView(options = {}) {
     store.toast('相册已创建');
   }));
 
-  /** 上传入口（最小形态，完整队列归 F6） */
+  /** 上传入口（第 4 节）：点击投递区 / 键盘 Enter 空格 / 隐藏 input 都落到同一处 */
   uploadButton.addEventListener('click', () => uploadInput.click());
+  uploadZone.addEventListener('click', event => {
+    if (event.target === uploadInput) return;      // input 自己在 sr-only 里，别转圈
+    uploadInput.click();
+  });
+  uploadZone.addEventListener('keydown', event => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      uploadInput.click();
+    }
+  });
   uploadInput.addEventListener('change', store.guard(() => onUpload(uploadInput.files)));
+
+  /* ------------------------------------------------------------------------
+     全页拖放（本卡新增）：拖文件进窗口 → 整页高亮 → 任意位置松手都进队列
+     ------------------------------------------------------------------------
+     为什么要 depth 计数：dragenter / dragleave 会在子元素之间反复触发
+     （鼠标从 body 移到 div 上就是一次 leave + enter），只用布尔值会让高亮闪烁
+     或提前消失。计数归零才收高亮，这是拖放交互的标准做法。
+     `contains(Files)` 同时把我们和"以图搜图"的参考图拖放区分开（3.12 只在
+     拖的是单张图片且落在参考图区时生效）。 */
+  function hasDroppableFiles(transfer) {
+    if (!transfer) return false;
+    const types = transfer.types ? [...transfer.types] : [];
+    return types.includes('Files');
+  }
+
+  let dragDepth = 0;
+
+  function setDragOverlay(on) {
+    dropzoneOverlay.hidden = !on;
+    root.dataset.dragging = on ? 'true' : 'false';
+  }
+
+  document_.addEventListener('dragenter', event => {
+    if (!hasDroppableFiles(event.dataTransfer)) return;
+    event.preventDefault();
+    dragDepth += 1;
+    setDragOverlay(true);
+  });
+  document_.addEventListener('dragover', event => {
+    if (!hasDroppableFiles(event.dataTransfer)) return;
+    event.preventDefault();                        // 不 preventDefault 就不会有 drop 事件
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+    // 投递区的高亮也要跟着全页拖放亮起来。参考图投递区自己的 dragover 在拖文件时
+    // 会主动跳过（见 §6），所以那一路的高亮只能由这里补（实测：只亮遮罩、投递区不亮）。
+    uploadZone.dataset.drag = 'true';
+  });
+  document_.addEventListener('dragleave', event => {
+    if (!hasDroppableFiles(event.dataTransfer)) return;
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (!dragDepth) {
+      setDragOverlay(false);
+      uploadZone.dataset.drag = 'false';
+    }
+  });
+  document_.addEventListener('drop', store.guard(event => {
+    if (!hasDroppableFiles(event.dataTransfer)) return;
+    event.preventDefault();
+    dragDepth = 0;
+    setDragOverlay(false);
+    uploadZone.dataset.drag = 'false';
+    if (uploadBusy()) {
+      store.toast('上一批还在上传，请等它结束再拖入新的照片');
+      return;
+    }
+    onUpload(event.dataTransfer.files);
+  }));
 
   /* ======================================================================
      11) 生命周期
@@ -1215,12 +1417,27 @@ export function createLibraryView(options = {}) {
     clearReference();
     clearModelHint();
     searching = false;
-    uploading = false;
     setSearchBusy(false);
     searchForm.reset();
     setStrictness('balanced');
-    nodes.uploadStatus.hidden = true;
-    if (modals) modals.close(dialog);
+    // 上传（第 4 节）：登出 / 换账户时队列与目标相册都要清干净，
+    // 免得下一个账户看到上一个账户的文件名（4.5 的延伸；行为清单 1.5 的"彻底清空"）
+    pendingFiles = [];
+    uploadTarget.albumId = null;
+    uploadTarget.name = '';
+    uploadQueue.setItems([]);
+    uploadQueue.setAlbumName('');
+    uploadQueue.setActive(false);
+    uploadZone.dataset.state = 'idle';
+    uploadZone.dataset.drag = 'false';
+    dragDepth = 0;
+    setDragOverlay(false);
+    uploadInput.value = '';
+    uploadDialog.setFiles([]);
+    if (modals) {
+      modals.close(dialog);
+      modals.close(uploadDialogNode);
+    }
   }
 
   async function refreshAll() {
@@ -1241,6 +1458,7 @@ export function createLibraryView(options = {}) {
       renderResultsBar();
       renderGrid();
       renderEmpty();
+      render();                    // 上传锁定态也要在挂载时对齐一次
       setStrictness('balanced');
       // 每次挂载都重新对账一次（登出再登录、账户切换后都要干净）
       (async () => {
@@ -1293,6 +1511,16 @@ export function createLibraryView(options = {}) {
     setReference,
     clearReference,
     probe,
+    // 上传（第 4 节）的对外入口：验收脚本用它读遥测、驱动重试、读队列快照
+    uploader,
+    uploadQueue,
+    startUpload,
+    openUploadDialog,
+    /** 上传遥测（4.1 的进度回调次数 / 4.6 的重复数 / 4.7 的逐字通知都在这里）。 */
+    uploadTelemetry: () => ({ ...uploader.telemetry }),
+    /** 队列快照（每张一行的状态）。 */
+    uploadQueueSnapshot: () => uploadQueue.snapshot(),
+    get uploadBusy() { return uploadBusy(); },
     get referenceFile() { return referenceFile; },
     get queryIntent() { return queryIntent; },
   };

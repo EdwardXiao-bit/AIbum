@@ -416,28 +416,86 @@
 .library__tail { display: flex; justify-content: center; }
 
 /* --------------------------------------------------------------------------
-   7) 上传入口（最小形态；完整队列归 F6）
+   7) 上传入口与队列（阶段 3.4 上传体验）
+   --------------------------------------------------------------------------
+   设计系统的 .upload__zone / .queue（components.css §14）直接复用，这里只补：
+     · 投递区与队列在结果区下方的摆法（.library__upload-*）
+     · **全页拖放遮罩** .dropzone —— 拖文件进窗口时整页高亮（旧前端没有）
    -------------------------------------------------------------------------- */
 
 .library__main { display: flex; flex-direction: column; gap: var(--sp-5); min-width: 0; }
-.library__main-foot {
+.library__upload-wrap { display: flex; flex-direction: column; gap: var(--sp-4); }
+.library__upload-foot {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--sp-3);
 }
-.library__inline-note {
+/* 投递区在页面底部要"矮一点"，别把结果网格挤下去（--compact 已在组件层定义，这里再压一档） */
+.library__upload-foot .upload__zone { flex: 1 1 22rem; padding: var(--sp-4) var(--sp-5); }
+.library__upload-foot .upload__text { display: flex; flex-direction: column; gap: var(--mark-gap); min-width: 0; }
+/* 投递区在传中：不要看起来像能点（4.8 的视觉侧） */
+.upload__zone[data-state="busy"] { cursor: progress; }
+
+/* 队列面板：自己有 padding，因为它是浮在结果区下方的一块独立区域 */
+.library__upload-wrap .library__upload,
+.library__upload {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: var(--sp-3);
-  margin-left: auto;
-  font-size: var(--fs-ctl);
-  color: var(--muted);
+  padding: var(--sp-4);
+  border: var(--bw) solid var(--line);
+  border-radius: var(--r);
+  background: var(--elev);
 }
-.library__inline-note .progress { width: 12rem; }
+.queue__album { color: var(--muted); }
+.queue__act--text { width: auto; height: var(--ctl-h-sm); padding: 0 var(--sp-2); }
+/* 队列行的状态色与设计系统的 data-state 对齐（done 行压暗一档） */
+.queue__item[data-state="queued"] { background: var(--sunken); }
 
 /* --------------------------------------------------------------------------
-   8) 浮层内容（新建相册 / 删除确认）
+   7b) 全页拖放遮罩 .dropzone（本卡新增）
+   --------------------------------------------------------------------------
+   拖文件进窗口 → 整页高亮（虚线内框 + 半透明压暗），松手即入队列。
+   `pointer-events: none`：遮罩不能吃掉 drop 事件——文件落在遮罩上也要能收到。
+   z-index 取在"吸顶元素之上、下拉/浮层之下"，这样它既看得见，也不挡真正的浮层。
+   -------------------------------------------------------------------------- */
+.dropzone {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-sticky) + 5);
+  display: grid;
+  place-items: center;
+  padding: var(--sp-6);
+  pointer-events: none;
+  background: color-mix(in srgb, var(--scrim) calc(var(--scrim-op) * 100%), transparent);
+  backdrop-filter: blur(var(--blur-sm));
+}
+/* 虚线内框：用 ::before 画，避免为了一个装饰再套一层节点 */
+.dropzone::before {
+  content: "";
+  position: absolute;
+  inset: var(--sp-5);
+  border: var(--bw-thick) dashed var(--accent);
+  border-radius: var(--r-lg);
+}
+.dropzone__card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-6) var(--sp-7);
+  border-radius: var(--r-lg);
+  background: var(--elev);
+  box-shadow: var(--sh-3);
+  text-align: center;
+}
+.dropzone__title { font-size: var(--fs-xl); font-weight: var(--fw-black); color: var(--text); margin: 0; }
+.dropzone__sub { font-size: var(--fs-base); color: var(--muted); margin: 0; max-width: 38ch; }
+
+/* --------------------------------------------------------------------------
+   8) 浮层内容（新建相册 / 删除确认 / 上传目标相册）
    -------------------------------------------------------------------------- */
 
 .library__confirm-text {
@@ -445,6 +503,10 @@
   color: var(--text);
   line-height: var(--lh-base);
 }
+
+.upload-dialog__summary { font-size: var(--fs-md); color: var(--text); margin: 0; }
+.upload-dialog__summary + .field { margin-top: var(--sp-2); }
+[data-role="upload-dialog-hint"][data-state="warn"] { color: var(--warn); }
 
 /* --------------------------------------------------------------------------
    9) 窄屏：筛选变抽屉（阶段 3.5 / D3 —— 功能不减少，只是换个摆法）

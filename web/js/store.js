@@ -104,6 +104,10 @@ const state = {
   health: null,
   /** 是否有互斥的长任务在跑（上传/批量/检索）。 */
   busy: false,
+  /** 上传批次的嵌套计数（行为清单 4.8）：>0 表示正在上传。
+      为什么是计数而不是布尔：队列本身可能嵌套发起（自动串行 + 用户点"重试"），
+      布尔会被先结束的那一层提前清掉。isUploading() 对外只暴露布尔。 */
+  uploading: 0,
   /** 顶部提示条：{text, visible, at}。 */
   toast: { text: '', visible: false, at: 0 },
   /** 最近若干条通知的流水（只读用途：验收脚本要确定"这条报错是谁报的"，
@@ -236,6 +240,7 @@ export function resetToLogin() {
   state.user = null;
   state.view = 'login';
   state.busy = false;
+  state.uploading = 0;      // 4.5/4.8：账户切换后上传批次已作废，标记不能留成脏值
   state.detail = null;
   state.health = null;
   state.users = [];
@@ -265,6 +270,7 @@ export function enterWorkspace(user) {
   state.authError = '';
   state.view = state.portal === 'admin' ? 'admin' : 'library';
   state.busy = false;
+  state.uploading = 0;
   state.detail = null;
   state.health = null;
   state.users = [];
@@ -311,6 +317,39 @@ export function setBusy(busy) {
   state.busy = Boolean(busy);
   emit('busy', state.busy);
   return state.busy;
+}
+
+/* --------------------------------------------------------------------------
+   6b) 上传批次标记（行为清单 4.8）
+   --------------------------------------------------------------------------
+   为什么放在 store 而不是视图里：上传期间要禁用的是**顶栏**的登出与账户安全按钮，
+   而顶栏属于应用外壳（web/js/app.js），不属于相册主界面（views/library.js）。
+   只有一个共享的、可订阅的标记，外壳才能在"上传开始/结束"的那一刻改自己的按钮状态。
+   这同时让验收脚本能直接读一个状态位（store.isUploading()）而不必去猜 DOM。
+   -------------------------------------------------------------------------- */
+
+/** 当前是否在上传（4.8 的判据；上传队列视图、外壳顶栏、验收探针共用）。 */
+export function isUploading() {
+  return state.uploading > 0;
+}
+
+/**
+ * 进入 / 退出上传状态。成对调用（view 的 finally 保证配对），计数归零才算结束。
+ * @param {boolean} uploading
+ */
+export function setUploading(uploading) {
+  const next = Math.max(0, state.uploading + (uploading ? 1 : -1));
+  state.uploading = next;
+  emit('uploading', isUploading());
+  return isUploading();
+}
+
+/** 强制清零（登出 / 账户切换：在途上传已经作废，计数不能留成脏值）。 */
+export function resetUploading() {
+  if (state.uploading === 0) return false;
+  state.uploading = 0;
+  emit('uploading', false);
+  return false;
 }
 
 /* --------------------------------------------------------------------------

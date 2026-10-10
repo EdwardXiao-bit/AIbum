@@ -126,6 +126,22 @@ function renderTopbar(state) {
   nodes.libraryLink.hidden = state.portal !== 'admin';
 }
 
+/**
+ * 4.8 上传期间锁定：**登出**与**账户安全**在上传进行中必须禁用。
+ * 为什么要由外壳来做：这两个按钮属于顶栏（本文件），而上传说到底是相册主界面的事，
+ * 主界面碰不到顶栏。共享的状态位（store.setUploading）是两边唯一的交汇点——
+ * 上传时改状态，这里订阅同一个消息改按钮，谁也不越界去 hold 对方的 DOM。
+ * 注意：不禁用"管理后台"与"我的相册"跳转（旧版也只锁这两个 + 上传输入框）。
+ */
+function renderUploadLock(state) {
+  const busy = state.uploading > 0;
+  nodes.logout.disabled = busy;
+  nodes.securityButton.disabled = busy;
+  nodes.logout.setAttribute('aria-disabled', busy ? 'true' : 'false');
+  nodes.securityButton.setAttribute('aria-disabled', busy ? 'true' : 'false');
+  if (busy) modals.close(overlays.elements.security);   // 上传中不许改密码：开着的安全面板直接收起
+}
+
 /** 入口文案（8.4）：管理员入口与用户入口共用一个 HTML，靠这里换字。 */
 function applyPortalChrome(state) {
   const admin = state.portal === 'admin';
@@ -145,6 +161,7 @@ function render(state, reason) {
   // （入口靠 location.pathname 判定，8.1），只在启动时算一次会永远停在 user 版文案。
   applyPortalChrome(state);
   renderTopbar(state);
+  renderUploadLock(state);          // 4.8：上传期间禁用登出 / 账户安全
   const view = activeView(state);
   if (view) mountView(view);
   // 详情是浮层：它自己按 store.view / routeParams 决定开合，不参与 mountView 的单视图互斥
@@ -171,6 +188,7 @@ nodes.adminButton.addEventListener('click', () => router.navigate('#/admin'));
 
 // 首屏先按当前状态刷一遍（此时 portal 还是默认的 user，boot 里 setPortal 后 render 会再刷）
 applyPortalChrome(store.getState());
+renderUploadLock(store.getState());
 bindToast(nodes.toast);
 // 详情抽屉先进 DOM，再订阅：深链直接落在 #/photo/:id 时，启动的第一次 render 就能打开它
 detailView.mount(document.body);

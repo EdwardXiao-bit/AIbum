@@ -1,0 +1,149 @@
+/* ==========================================================================
+   AIbum · 照片详情（右侧抽屉）  web/css/detail.css
+   --------------------------------------------------------------------------
+   阶段 3.3（F5）。**只放这一个视图的排版**，全部选择器都挂在 .detail 下面，
+   与 library.css 各管各的，互不抢样式。
+
+   形态（决策台账 D2）：右侧抽屉，复用设计系统的 .drawer（css/components.css §10）。
+   这里只补三件设计系统不负责的事：
+     1) 层级：共享遮罩 .scrim 在 --z-dialog(50)，抽屉默认只有 --z-drawer(40) →
+        必须抬到遮罩之上，否则抽屉会被遮罩盖住（这是"抽屉看起来根本没打开"的成因）
+     2) 宽屏宽度（原图要看得清）；窄屏仍走 components.css 的底部 sheet 形态
+     3) 视图内部排版：预览图 / 元信息 / 自动标签行 / 字段 / 按钮
+
+   规矩（与 tokens/base/components 一致）：
+     - 只引用令牌，不写死颜色 / 圆角 / 阴影 / 间距 / 字号（F2 定的：硬编码色值 0）
+     - 不用内联 style（CSP §0A E1/E5）；动态样式走 data-* 属性 + 这里的规则
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1) 抽屉本体
+   -------------------------------------------------------------------------- */
+
+.detail {
+  /* 压在共享遮罩之上：--z-dialog(50) + 1。抽屉与遮罩是同一个浮层系统里的两层。 */
+  z-index: calc(var(--z-dialog) + 1);
+}
+
+.detail__heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+.detail__heading .eyebrow { margin: 0; }
+.detail__close { margin-left: auto; }
+.detail__meta {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+/* 表单撑满抽屉：body 滚动、foot 常驻（与 .drawer 的 flex 列配合） */
+.detail__form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.detail__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+
+/* --------------------------------------------------------------------------
+   2) 预览图
+   -------------------------------------------------------------------------- */
+
+.detail__figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  min-height: 160px;
+  border: var(--bw) solid var(--line);
+  border-radius: var(--r);
+  background: var(--sunken);
+  overflow: hidden;
+}
+.detail__image {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* 原图往往是几千像素；这里限高，让"元信息 + 字段"在同一屏里也看得见 */
+  max-height: 46vh;
+  object-fit: contain;
+}
+/* 加载失败：收起那张空图，只留一句话（不留一块灰） */
+.detail__image[data-failed="true"] { display: none; }
+.detail__image-note {
+  margin: 0;
+  padding: var(--sp-4);
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  text-align: center;
+}
+
+/* --------------------------------------------------------------------------
+   3) 自动标签行（行为清单 6.3）与状态行（6.4）
+   -------------------------------------------------------------------------- */
+
+.detail__auto {
+  margin: 0;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-sm);
+  background: var(--sunken);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-base);
+  color: var(--muted);
+}
+
+.detail__state {
+  margin: 0;
+  font-size: var(--fs-base);
+  color: var(--muted);
+}
+/* 失败态才用重色（正常态不打扰） */
+.detail__state[data-status="failed"] { color: var(--danger); }
+
+.detail__favorite {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  font-size: var(--fs-base);
+}
+.detail__favorite-label { color: var(--text); }
+
+/* --------------------------------------------------------------------------
+   4) 底部按钮区（6.5 的条件启用由 JS 置 disabled，样式交给 .btn[disabled]）
+   -------------------------------------------------------------------------- */
+
+.detail__foot {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+/* 保存是主操作，占一整行更醒目；其余三个排一行 */
+.detail__foot [data-role="save"] { flex: 1 1 100%; }
+
+/* 6.6 的「下载原图」必须是 <a>（下载由后端 Content-Disposition 触发，按钮做不了），
+   而设计系统的 .btn 没有清掉 <a> 自带的下划线（base.css 的 a 规则只设了颜色与下划线偏移），
+   所以这里补一行，让它和旁边两个 <button> 长得一样。
+   注：顶栏那两个 <a class="btn"> 有同样的症状，属设计系统层面的小缺口，留给 F10 收口。 */
+.detail__foot a.btn { text-decoration: none; }
+
+/* --------------------------------------------------------------------------
+   5) 断点
+   --------------------------------------------------------------------------
+   窄屏（<=640px）不在这里管：components.css 会把 .drawer 变成底部 sheet
+   （把手、圆角上沿、按钮并排、避开手势条），那是设计系统定的形态。
+   这里只处理宽屏宽度 —— 原图 520px 有点挤，给到 560px。
+   -------------------------------------------------------------------------- */
+
+@media (min-width: 641px) {
+  .detail { width: min(560px, 100vw); }
+}

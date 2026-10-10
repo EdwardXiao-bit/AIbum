@@ -9,6 +9,10 @@
      app.js（本文件）应用外壳：顶栏、视图挂载、浮层、登出（1.5）
      views/auth.js  认证视图（1.1 - 1.4、1.10）
      views/account.js 账户浮层（1.6 - 1.9）
+     views/library.js 相册主界面（第 2 / 3 / 5 节 + 第 9 节轮询）
+     views/detail.js  照片详情**抽屉**（第 6 节）—— 不是并列视图，而是叠在主界面之上的浮层：
+                      store.view === 'photo' 时主界面仍然挂着（见下面的 activeView）。
+                      理由：关掉抽屉要回到原来的结果集，卸载再挂回会把列表打回第 1 页。
 
    行为清单对应：
      1.5 登出 —— POST /auth/logout → 切回登录态，并**彻底清空**用户 / 照片 / 选中 /
@@ -28,6 +32,7 @@ import { createModals } from './components/modal.js';
 import { bindToast } from './components/toast.js';
 import { createAccountOverlays } from './views/account.js';
 import { createAuthView } from './views/auth.js';
+import { createDetailView } from './views/detail.js';
 import { createLibraryView } from './views/library.js';
 import { PLACEHOLDERS, createPlaceholderView } from './views/placeholder.js';
 
@@ -61,13 +66,36 @@ const overlays = createAccountOverlays({ modals });
 const authView = createAuthView({ template: must('tpl-auth'), overlays });
 const libraryView = createLibraryView({ modals, navigate: (target, options) => router.navigate(target, options) });
 
-/** store.view → 视图。照片详情 / 管理后台是后续卡片（F5 / F7），这里仍是占位。 */
+/**
+ * 照片详情抽屉（第 6 节）。它是浮层不是视图：挂在 <body> 上（position: fixed 的抽屉
+ * 不该受 .container 的排版影响），由 render() 里的 detailView.sync() 按路由开关。
+ * runSimilar / onSaved / onRetried 直接复用主界面已有的入口，避免第二套实现：
+ *   6.10 → library.runSimilar(id)（相同的结果集容器，标题"相似照片（已排除参考图）"）
+ *   6.7  → 保存后 refreshOptions + 重放当前查询（legacy L231）
+ *   6.9  → 重新分析后重载（legacy L233）
+ */
+const detailView = createDetailView({
+  modals,
+  navigate: (target, options) => router.navigate(target, options),
+  runSimilar: id => libraryView.runSimilar(id),
+  onSaved: () => libraryView.refreshAll(),
+  onRetried: () => libraryView.refreshAll(),
+});
+
+/** store.view → 视图。照片详情不是这里的一个条目（见 activeView）；管理后台归 F7。 */
 const views = {
   login: authView,
   library: libraryView,
-  photo: createPlaceholderView(PLACEHOLDERS.photo),
   admin: createPlaceholderView(PLACEHOLDERS.admin),
 };
+
+/**
+ * 当前该挂哪个视图。**photo 路由下仍然挂主界面**，详情是叠在它上面的抽屉（D2 默认形态）：
+ * 这样"打开详情 → 关闭"不会重建列表、不会丢滚动位置与翻页进度。
+ */
+function activeView(state) {
+  return state.view === 'photo' ? views.library : views[state.view];
+}
 
 /** 同一时刻只挂一个视图。 */
 let mounted = null;
@@ -117,8 +145,10 @@ function render(state, reason) {
   // （入口靠 location.pathname 判定，8.1），只在启动时算一次会永远停在 user 版文案。
   applyPortalChrome(state);
   renderTopbar(state);
-  const view = views[state.view];
+  const view = activeView(state);
   if (view) mountView(view);
+  // 详情是浮层：它自己按 store.view / routeParams 决定开合，不参与 mountView 的单视图互斥
+  detailView.sync(state);
 }
 
 /* --------------------------------------------------------------------------
@@ -142,6 +172,8 @@ nodes.adminButton.addEventListener('click', () => router.navigate('#/admin'));
 // 首屏先按当前状态刷一遍（此时 portal 还是默认的 user，boot 里 setPortal 后 render 会再刷）
 applyPortalChrome(store.getState());
 bindToast(nodes.toast);
+// 详情抽屉先进 DOM，再订阅：深链直接落在 #/photo/:id 时，启动的第一次 render 就能打开它
+detailView.mount(document.body);
 store.subscribe(render);
 
 let bootResult = null;
@@ -156,7 +188,7 @@ try {
 // 验收钩子（阶段 1 的 next.html 用的是同一套命名）。正式视图不依赖它。
 window.__aibum = {
   api, store, router, theme, main,
-  modals, overlays, authView, views,
+  modals, overlays, authView, libraryView, detailView, views,
   get bootResult() { return bootResult; },
   get bootError() { return bootError; },
 };

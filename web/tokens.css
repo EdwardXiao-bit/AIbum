@@ -1,0 +1,197 @@
+/* ==========================================================================
+   AIbum · 设计令牌  tokens.css
+   --------------------------------------------------------------------------
+   为什么全部加 ab- 前缀：现有的 web/style.css 已经占用了 --ink / --muted /
+   --line / --accent / --paper 这些变量名。如果这里直接用同名变量，迁移期间
+   两个文件同时加载会把现有页面的配色改掉。所以本文件所有令牌一律 ab- 前缀，
+   与旧样式完全隔离，可以安全共存、逐屏替换。
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1) 尺度类令牌（跨主题不变）
+   -------------------------------------------------------------------------- */
+:root {
+  /* 字号 */
+  --ab-fs-xs:   11.5px;   /* 角标、计数 */
+  --ab-fs-sm:   12.5px;   /* 次要说明、标签 */
+  --ab-fs-base: 14px;     /* 正文 */
+  --ab-fs-md:   15px;     /* 强调正文、输入框 */
+  --ab-fs-lg:   17px;     /* 卡片标题 */
+  --ab-fs-xl:   22px;     /* 区块标题 */
+  --ab-fs-2xl:  28px;     /* 页面标题 */
+  --ab-fs-hero: clamp(28px, 3.4vw, 42px);
+
+  /* 行高 */
+  --ab-lh-tight: 1.25;
+  --ab-lh-base:  1.6;
+  --ab-lh-loose: 1.75;
+
+  /* 字重 */
+  --ab-fw-normal: 400;
+  --ab-fw-medium: 600;
+  --ab-fw-bold:   700;
+  --ab-fw-black:  800;
+
+  /* 字距 */
+  --ab-ls-tight:  -1.2px;
+  --ab-ls-normal: 0;
+  --ab-ls-wide:   2px;
+
+  /* 间距（4 的倍数） */
+  --ab-sp-1:  4px;
+  --ab-sp-2:  8px;
+  --ab-sp-3:  12px;
+  --ab-sp-4:  16px;
+  --ab-sp-5:  20px;
+  --ab-sp-6:  24px;
+  --ab-sp-7:  32px;
+  --ab-sp-8:  40px;
+  --ab-sp-9:  56px;
+
+  /* 圆角 */
+  --ab-r-sm:   10px;
+  --ab-r:      14px;
+  --ab-r-lg:   18px;
+  --ab-r-pill: 999px;
+
+  /* 动效 */
+  --ab-dur:  .18s;
+  --ab-ease: cubic-bezier(.16, 1, .3, 1);
+
+  /* 层级 */
+  --ab-z-drawer: 40;
+  --ab-z-dialog: 50;
+  --ab-z-toast:  60;
+
+  /* 焦点环 */
+  --ab-ring-w: 3px;
+
+  /* 断点参考（写进注释，媒体查询里直接用数值）
+     --ab-bp-sm: 640px   --ab-bp-md: 900px
+     --ab-bp-lg: 1180px  --ab-bp-xl: 1480px */
+}
+
+/* --------------------------------------------------------------------------
+   2) 语义颜色令牌 · 默认主题（明亮）
+   -------------------------------------------------------------------------- */
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --ab-bg:        #fbfbf9;   /* 页面底 */
+  --ab-elev:      #ffffff;   /* 卡片/浮层 */
+  --ab-sunken:    #f4f4f1;   /* 内嵌槽、分段控件底 */
+  --ab-line:      #e8e8e3;   /* 描边 */
+  --ab-line-soft: #f1f1ee;   /* 更弱的分隔 */
+
+  --ab-text:      #14161a;
+  --ab-muted:     #6f7680;
+  --ab-faint:     #9aa1aa;
+  --ab-invert:    #ffffff;   /* 压在深色图片上的文字 */
+
+  --ab-accent:      #2f5bff;
+  --ab-accent-soft: #eaefff;
+  --ab-on-accent:   #ffffff;
+
+  --ab-primary-bg:  #14161a;  /* 主按钮：编辑式黑胶囊 */
+  --ab-primary-ink: #ffffff;
+
+  --ab-ok:     #1f8a52;
+  --ab-warn:   #9a7415;
+  --ab-danger: #c0392b;
+  --ab-danger-soft: #fdf0ee;
+
+  --ab-stat-bg:  #ffffffeb;   /* “分析中”徽章 */
+  --ab-stat-ink: #8a6100;
+
+  --ab-glass: #ffffffcc;
+  --ab-ring:  #2f5bff40;
+
+  --ab-sh-1: 0 1px 2px #14161a0a, 0 8px 30px #14161a0d;
+  --ab-sh-2: 0 2px 6px #14161a12, 0 18px 50px #14161a1a;
+  --ab-sh-3: 0 24px 60px #14161a24;
+}
+
+/* --------------------------------------------------------------------------
+   3) 其余主题：只覆盖颜色 / 圆角 / 阴影，零组件改动
+   -------------------------------------------------------------------------- */
+:root[data-theme="warm"] {
+  color-scheme: light;
+  --ab-bg:#fdf8f3; --ab-elev:#fff; --ab-sunken:#fbf3ea;
+  --ab-line:#f0e3d6; --ab-line-soft:#f8efe6;
+  --ab-text:#3a2e24; --ab-muted:#8a7767; --ab-faint:#b3a294;
+  --ab-accent:#d9643a; --ab-accent-soft:#fdeee7; --ab-on-accent:#fff;
+  --ab-primary-bg:#d9643a; --ab-primary-ink:#fff;
+  --ab-ok:#4e7a3f; --ab-warn:#9a7415; --ab-danger:#c0392b; --ab-danger-soft:#fdf0ee;
+  --ab-stat-bg:#fffbe8; --ab-stat-ink:#9a7415;
+  --ab-glass:#fdf8f3e6; --ab-ring:#d9643a40;
+  --ab-sh-1:0 2px 4px #a8734d0f, 0 10px 26px #a8734d14;
+  --ab-sh-2:0 4px 10px #a8734d14, 0 20px 46px #a8734d20;
+  --ab-sh-3:0 26px 60px #a8734d28;
+  --ab-r:20px; --ab-r-lg:24px; --ab-r-sm:14px;   /* 圆角也一起变 */
+}
+
+:root[data-theme="forest"] {
+  color-scheme: light;
+  --ab-bg:#f6f9f5; --ab-elev:#fff; --ab-sunken:#eef3ec;
+  --ab-line:#dfe8dc; --ab-line-soft:#eaf1e8;
+  --ab-text:#1b2620; --ab-muted:#61705f; --ab-faint:#8fa08c;
+  --ab-accent:#2f6b4f; --ab-accent-soft:#e6f0e9; --ab-on-accent:#fff;
+  --ab-primary-bg:#2f6b4f; --ab-primary-ink:#fff;
+  --ab-ok:#2f6b4f; --ab-warn:#8a6100; --ab-danger:#a8442f; --ab-danger-soft:#fbeeeb;
+  --ab-stat-bg:#fffbe8; --ab-stat-ink:#8a6100;
+  --ab-glass:#f6f9f5e6; --ab-ring:#2f6b4f40;
+  --ab-sh-1:0 1px 2px #1b262008, 0 8px 26px #1b26200d;
+  --ab-sh-2:0 2px 6px #1b262012, 0 18px 44px #1b262018;
+  --ab-sh-3:0 24px 56px #1b262022;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ab-bg:#0d1013; --ab-elev:#15191d; --ab-sunken:#1c2126;
+  --ab-line:#262c33; --ab-line-soft:#1e242a;
+  --ab-text:#e9edf0; --ab-muted:#98a2ac; --ab-faint:#6b7681;
+  --ab-invert:#0d1013;
+  --ab-accent:#ffb454; --ab-accent-soft:#3b2c12; --ab-on-accent:#1a1206;
+  --ab-primary-bg:#ffb454; --ab-primary-ink:#1a1206;
+  --ab-ok:#5fd08a; --ab-warn:#ffcf6b; --ab-danger:#ff8f7a; --ab-danger-soft:#2a1a17;
+  --ab-stat-bg:#241d0e; --ab-stat-ink:#ffcf6b;
+  --ab-glass:#11151abf; --ab-ring:#ffb45440;
+  --ab-sh-1:0 1px 0 #ffffff0a inset, 0 8px 24px #0006;
+  --ab-sh-2:0 16px 40px #0009;
+  --ab-sh-3:0 28px 70px #000b;
+}
+
+:root[data-theme="midnight"] {
+  color-scheme: dark;
+  --ab-bg:#0b1018; --ab-elev:#121a26; --ab-sunken:#182231;
+  --ab-line:#22303f; --ab-line-soft:#1a2634;
+  --ab-text:#e6edf6; --ab-muted:#93a3b8; --ab-faint:#66768a;
+  --ab-invert:#0b1018;
+  --ab-accent:#4cc9f0; --ab-accent-soft:#12303c; --ab-on-accent:#04202a;
+  --ab-primary-bg:#4cc9f0; --ab-primary-ink:#04202a;
+  --ab-ok:#5fd0a8; --ab-warn:#ffcf6b; --ab-danger:#ff8f7a; --ab-danger-soft:#1c2430;
+  --ab-stat-bg:#0e2833; --ab-stat-ink:#7fd8f0;
+  --ab-glass:#0b1018bf; --ab-ring:#4cc9f040;
+  --ab-sh-1:0 1px 0 #ffffff0a inset, 0 8px 24px #0006;
+  --ab-sh-2:0 16px 40px #0009;
+  --ab-sh-3:0 28px 70px #000b;
+}
+
+/* 未设置 data-theme 时（JS 尚未执行）跟随系统，避免先白后黑的闪烁 */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --ab-bg:#0d1013; --ab-elev:#15191d; --ab-sunken:#1c2126;
+    --ab-line:#262c33; --ab-line-soft:#1e242a;
+    --ab-text:#e9edf0; --ab-muted:#98a2ac; --ab-faint:#6b7681;
+    --ab-invert:#0d1013;
+    --ab-accent:#ffb454; --ab-accent-soft:#3b2c12; --ab-on-accent:#1a1206;
+    --ab-primary-bg:#ffb454; --ab-primary-ink:#1a1206;
+    --ab-stat-bg:#241d0e; --ab-stat-ink:#ffcf6b;
+    --ab-glass:#11151abf; --ab-ring:#ffb45440;
+    --ab-sh-1:0 1px 0 #ffffff0a inset, 0 8px 24px #0006;
+    --ab-sh-2:0 16px 40px #0009;
+    --ab-sh-3:0 28px 70px #000b;
+  }
+}

@@ -10,3 +10,6 @@ tmp/
 /*.zip
 docs/需求原文.txt
 docs/CLIP哈希论文摘读.txt
+
+# 前端重建期间的本地对照副本，不入版本库（旧前端可从 b633825 取回）
+web/legacy/

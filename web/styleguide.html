@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AIbum · 设计系统自查页</title>
+<!-- 必须在渲染前决定主题，否则会先闪一下浅色再变深色（FOUC） -->
+<script>
+(function () {
+  var KEY = 'aibum-theme';
+  var ok = ['auto','light','warm','forest','dark','midnight'];
+  var p = new URLSearchParams(location.search).get('theme');
+  var c = ok.indexOf(p) >= 0 ? p : (localStorage.getItem(KEY) || 'auto');
+  var r = c === 'auto'
+    ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    : c;
+  var el = document.documentElement;
+  el.setAttribute('data-theme', r);
+  el.setAttribute('data-choice', c);
+})();
+</script>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="components.css">
+<style>
+/* 本页自身的排版，不属于组件层 */
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--ab-bg);
+  color: var(--ab-text);
+  font: var(--ab-fs-base)/var(--ab-lh-base) system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.top {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; align-items: center; gap: var(--ab-sp-4);
+  height: 64px; padding: 0 var(--ab-sp-7);
+  background: var(--ab-glass); backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--ab-line);
+}
+.top h1 { font-size: var(--ab-fs-lg); margin: 0; letter-spacing: -.4px; }
+.top .sub { color: var(--ab-faint); font-size: var(--ab-fs-sm); }
+.top .spacer { flex: 1; }
+.wrap { max-width: 1080px; margin: 0 auto; padding: var(--ab-sp-7) var(--ab-sp-7) 120px; }
+section { margin-bottom: var(--ab-sp-8); }
+section > h2 {
+  font-size: var(--ab-fs-xl); letter-spacing: -.6px; margin: 0 0 var(--ab-sp-2);
+  padding-bottom: var(--ab-sp-3); border-bottom: 1px solid var(--ab-line);
+}
+section > .note { color: var(--ab-muted); font-size: var(--ab-fs-sm); margin: 0 0 var(--ab-sp-5); }
+.demo {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--ab-sp-4);
+  padding: var(--ab-sp-5); margin-bottom: var(--ab-sp-4);
+  background: var(--ab-elev); border: 1px solid var(--ab-line); border-radius: var(--ab-r);
+}
+.demo--col { flex-direction: column; align-items: stretch; }
+.demo__label {
+  flex: none; width: 100%; font-size: var(--ab-fs-xs); letter-spacing: 1.2px;
+  text-transform: uppercase; color: var(--ab-faint); font-weight: var(--ab-fw-bold);
+  margin-bottom: calc(var(--ab-sp-3) * -1);
+}
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--ab-sp-3); width: 100%; }
+.swatch { border: 1px solid var(--ab-line); border-radius: var(--ab-r-sm); overflow: hidden; }
+.swatch .chip { height: 56px; }
+.swatch .meta { padding: 8px 10px; font-size: var(--ab-fs-xs); background: var(--ab-elev); }
+.swatch .meta b { display: block; font-size: var(--ab-fs-sm); }
+.swatch .meta code { color: var(--ab-faint); }
+.type-row { display: flex; align-items: baseline; gap: var(--ab-sp-4); width: 100%; padding: 6px 0; border-bottom: 1px dashed var(--ab-line-soft); }
+.type-row .tag { flex: none; width: 130px; font-size: var(--ab-fs-xs); color: var(--ab-faint); }
+.radius-row { display: flex; gap: var(--ab-sp-4); flex-wrap: wrap; }
+.radius-box { width: 84px; height: 68px; background: var(--ab-sunken); border: 1px solid var(--ab-line); display: grid; place-items: center; font-size: var(--ab-fs-xs); color: var(--ab-muted); }
+.shadow-row { display: flex; gap: var(--ab-sp-5); flex-wrap: wrap; }
+.shadow-box { width: 150px; height: 88px; background: var(--ab-elev); border-radius: var(--ab-r); display: grid; place-items: center; font-size: var(--ab-fs-xs); color: var(--ab-muted); }
+.grid-demo { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: var(--ab-sp-5); width: 100%; }
+.ph { width: 100%; height: 100%; display: block; }
+/* 主题选择器 */
+.themer { position: absolute; top: 54px; right: var(--ab-sp-7); width: 268px; padding: 8px;
+  background: var(--ab-elev); border: 1px solid var(--ab-line); border-radius: var(--ab-r);
+  box-shadow: var(--ab-sh-2); display: none; z-index: 20; }
+.themer.open { display: block; }
+.themer h4 { margin: 6px 8px 8px; font-size: var(--ab-fs-xs); letter-spacing: 1.6px; text-transform: uppercase; color: var(--ab-faint); }
+.themer button { display: flex; align-items: center; gap: var(--ab-sp-3); width: 100%; padding: 9px 10px;
+  border: 0; border-radius: 11px; background: transparent; color: var(--ab-text); font: inherit; font-size: 13.5px; text-align: left; cursor: pointer; }
+.themer button:hover { background: var(--ab-sunken); }
+.themer button.on { background: var(--ab-accent-soft); color: var(--ab-accent); font-weight: var(--ab-fw-medium); }
+.themer .sw { display: flex; gap: 3px; margin-left: auto; }
+.themer .sw i { width: 13px; height: 13px; border-radius: 4px; border: 1px solid #0000001a; }
+.themer hr { border: 0; border-top: 1px solid var(--ab-line); margin: 6px 4px; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1>AIbum 设计系统</h1>
+  <span class="sub">阶段 1 · 令牌与组件自查页</span>
+  <span class="spacer"></span>
+  <span class="sub" id="cur-theme"></span>
+  <button class="ab-btn ab-btn--icon ab-btn--ghost" id="theme-btn" title="切换主题" aria-haspopup="true" aria-expanded="false">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 000 18 4.5 4.5 0 000-9 4.5 4.5 0 010-9z"/></svg>
+  </button>
+  <div class="themer" id="themer" role="menu">
+    <h4>界面主题</h4>
+    <button data-set="auto"><span>跟随系统</span><span class="sw"><i style="background:#fbfbf9"></i><i style="background:#0d1013"></i><i style="background:#2f5bff"></i></span></button>
+    <hr>
+    <button data-set="light"><span>明亮（默认）</span><span class="sw"><i style="background:#fbfbf9"></i><i style="background:#fff"></i><i style="background:#2f5bff"></i></span></button>
+    <button data-set="warm"><span>暖阳</span><span class="sw"><i style="background:#fdf8f3"></i><i style="background:#fff"></i><i style="background:#d9643a"></i></span></button>
+    <button data-set="forest"><span>森绿</span><span class="sw"><i style="background:#f6f9f5"></i><i style="background:#fff"></i><i style="background:#2f6b4f"></i></span></button>
+    <hr>
+    <button data-set="dark"><span>暗房</span><span class="sw"><i style="background:#0d1013"></i><i style="background:#15191d"></i><i style="background:#ffb454"></i></span></button>
+    <button data-set="midnight"><span>深蓝</span><span class="sw"><i style="background:#0b1018"></i><i style="background:#121a26"></i><i style="background:#4cc9f0"></i></span></button>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <section>
+    <h2>1 · 颜色</h2>
+    <p class="note">组件只引用这些语义名，不引用具体色值。换主题 = 换这一组值，组件代码一行不动。</p>
+    <div class="demo demo--col">
+      <span class="demo__label">表面与描边</span>
+      <div class="swatches">
+        <div class="swatch"><div class="chip" style="background:var(--ab-bg)"></div><div class="meta"><b>--ab-bg</b><code>页面底</code></div></div>
+        <div class="swatch"><div class="chip" style="background:var(--ab-elev)"></div><div class="meta"><b>--ab-elev</b><code>卡片/浮层</code></div></div>
+        <div class="swatch"><div class="chip" style="background:var(--ab-sunken)"></div><div class="meta"><b>--ab-sunken</b><code>内嵌槽</code></div></div>
+        <div class="swatch"><div class="chip" style="background:var(--ab-line)"></div><div class="meta"><b>--ab-line</b><code>描边</code></div></div>
+      </div>
+    </div>
+    <div class="demo demo--col">
+      <span class="demo__label">文字与强调</span>
+      <div class="swatches">
+        <div class="swatch"><div class="chip" style="background:var(--ab-text)"></div><div class="meta"><b>--ab-text</b><code>主文字</code></div></div>
+        <div class="swatch"><div class="chip" style="background:var(--ab-muted)"></div><div class="meta"><b>--ab-muted</b><code>次要</code></div></div>
+        <div class="swatch"><div class="chip" style="background:var(--ab-faint)"></div><div class="meta"><b>--ab-faint</b><code>最弱</code></div></div>
+        <div class="swatch"><div class="chip" style="background:var(--ab-accent)"></div><div class="meta"><b>--ab-accent</b><code>强调色</code></div></div>
+        <div class="swatch"><div class="chip" style="background:var(--ab-accent-soft)"></div><div class="meta"><b>--ab-accent-soft</b><code>选中底</code></div></div>
+        <div class="swatch"><div class="chip" style="background:var(--ab-primary-bg)"></div><div class="meta"><b>--ab-primary-bg</b><code>主按钮</code></div></div>
+      </div>
+    </div>
+    <div class="demo demo--col">
+      <span class="demo__label">语义色</span>
+      <div class="swatches">
+        <div class="swatch"><div class="chip" style="background:var(--ab-ok)"></div><div class="meta"><b>--ab-ok</b></div></div>
+        <div class="swatch"><div class="chip" style="background:var(--ab-warn)"></div><div class="meta"><b>--ab-warn</b></div></div>
+        <div class="swatch"><div class="chip" style="background:var(--ab-danger)"></div><div class="meta"><b>--ab-danger</b></div></div>
+        <div class="swatch"><div class="chip" style="background:var(--ab-danger-soft)"></div><div class="meta"><b>--ab-danger-soft</b></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>2 · 字阶</h2>
+    <p class="note">中文在 11.5–15px 区间最容易糊，所以每个字号都配了固定行高。</p>
+    <div class="demo demo--col">
+      <div class="type-row"><span class="tag">--ab-fs-hero</span><span style="font-size:var(--ab-fs-hero);font-weight:var(--ab-fw-black);letter-spacing:var(--ab-ls-tight)">记得画面，就能找到</span></div>
+      <div class="type-row"><span class="tag">--ab-fs-2xl</span><span style="font-size:var(--ab-fs-2xl);font-weight:var(--ab-fw-black)">我的照片</span></div>
+      <div class="type-row"><span class="tag">--ab-fs-xl</span><span style="font-size:var(--ab-fs-xl);font-weight:var(--ab-fw-bold)">照片详情</span></div>
+      <div class="type-row"><span class="tag">--ab-fs-lg</span><span style="font-size:var(--ab-fs-lg);font-weight:var(--ab-fw-medium)">海边日落.jpg</span></div>
+      <div class="type-row"><span class="tag">--ab-fs-md</span><span style="font-size:var(--ab-fs-md)">阳光下草地上的小狗</span></div>
+      <div class="type-row"><span class="tag">--ab-fs-base</span><span style="font-size:var(--ab-fs-base)">用一句中文描述你想找的画面。</span></div>
+      <div class="type-row"><span class="tag">--ab-fs-sm</span><span style="font-size:var(--ab-fs-sm);color:var(--ab-muted)">勾选后立即筛选 · 多选匹配任一标签</span></div>
+      <div class="type-row"><span class="tag">--ab-fs-xs</span><span style="font-size:var(--ab-fs-xs);color:var(--ab-faint);letter-spacing:var(--ab-ls-wide)">PERSONAL LIBRARY</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>3 · 圆角 · 阴影 · 间距</h2>
+    <p class="note">暖阳主题会把圆角令牌整体调大（14→20），所以圆角必须走令牌，不能写死。</p>
+    <div class="demo demo--col">
+      <span class="demo__label">圆角</span>
+      <div class="radius-row">
+        <div class="radius-box" style="border-radius:var(--ab-r-sm)">--ab-r-sm</div>
+        <div class="radius-box" style="border-radius:var(--ab-r)">--ab-r</div>
+        <div class="radius-box" style="border-radius:var(--ab-r-lg)">--ab-r-lg</div>
+        <div class="radius-box" style="border-radius:var(--ab-r-pill)">pill</div>
+      </div>
+    </div>
+    <div class="demo demo--col">
+      <span class="demo__label">阴影</span>
+      <div class="shadow-row">
+        <div class="shadow-box" style="box-shadow:var(--ab-sh-1)">--ab-sh-1 卡片</div>
+        <div class="shadow-box" style="box-shadow:var(--ab-sh-2)">--ab-sh-2 浮层</div>
+        <div class="shadow-box" style="box-shadow:var(--ab-sh-3)">--ab-sh-3 模态</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>4 · 按钮</h2>
+    <div class="demo">
+      <span class="demo__label">变体</span>
+      <button class="ab-btn ab-btn--primary">＋ 上传照片</button>
+      <button class="ab-btn ab-btn--accent">搜索</button>
+      <button class="ab-btn">刷新</button>
+      <button class="ab-btn ab-btn--ghost">账户安全</button>
+      <button class="ab-btn ab-btn--danger">删除所选</button>
+      <button class="ab-btn ab-btn--icon" title="网格视图"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></button>
+    </div>
+    <div class="demo">
+      <span class="demo__label">尺寸</span>
+      <button class="ab-btn ab-btn--sm">小 32</button>
+      <button class="ab-btn">默认 40</button>
+      <button class="ab-btn ab-btn--lg">大 48</button>
+      <button class="ab-btn ab-btn--primary ab-btn--sm">小主按钮</button>
+    </div>
+    <div class="demo">
+      <span class="demo__label">状态</span>
+      <button class="ab-btn">默认</button>
+      <button class="ab-btn" disabled>禁用</button>
+      <button class="ab-btn" aria-busy="true"><span class="ab-spinner"></span>上传中…</button>
+      <button class="ab-btn ab-btn--primary" disabled>禁用主按钮</button>
+      <button class="ab-btn ab-btn--block" style="max-width:240px">块级按钮</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>5 · 表单</h2>
+    <div class="demo" style="align-items:flex-start">
+      <span class="demo__label">输入 · 选择 · 状态</span>
+      <div class="ab-field" style="min-width:240px">
+        <label for="d1">照片名称</label>
+        <input class="ab-input" id="d1" value="海边日落.jpg">
+        <span class="ab-hint">最多 200 个字符</span>
+      </div>
+      <div class="ab-field" style="min-width:200px">
+        <label for="d2">所属相册</label>
+        <select class="ab-select" id="d2"><option>所有相册</option><option>旅行</option></select>
+      </div>
+      <div class="ab-field" style="min-width:240px">
+        <label for="d3">地点</label>
+        <input class="ab-input ab-input--invalid" id="d3" aria-invalid="true" value="??">
+        <span class="ab-error-text">地点不能包含特殊符号</span>
+      </div>
+      <div class="ab-field" style="min-width:240px">
+        <label for="d4">禁用状态</label>
+        <input class="ab-input" id="d4" value="不可编辑" disabled>
+      </div>
+    </div>
+    <div class="demo">
+      <span class="demo__label">搜索框</span>
+      <div class="ab-search" style="flex:1;min-width:280px">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input class="ab-input" placeholder="描述你想找的画面，例如：阳光下草地上的小狗">
+      </div>
+      <label class="ab-check"><input type="checkbox" checked> 仅收藏</label>
+    </div>
+  </section>
+
+  <section>
+    <h2>6 · 芯片与标签列表</h2>
+    <div class="demo">
+      <span class="demo__label">芯片（可多选）</span>
+      <button class="ab-chip" aria-pressed="true">海边 <span class="ab-chip__count">18</span></button>
+      <button class="ab-chip" aria-pressed="false">日落 <span class="ab-chip__count">7</span></button>
+      <button class="ab-chip" aria-pressed="false">猫 <span class="ab-chip__count">12</span></button>
+      <button class="ab-chip" aria-pressed="false">食物 <span class="ab-chip__count">23</span></button>
+      <span class="ab-chip ab-chip--plain">只读标签</span>
+    </div>
+    <div class="demo" style="max-width:280px">
+      <span class="demo__label">侧栏标签列表</span>
+      <div class="ab-taglist" style="width:100%">
+        <button class="ab-taglist-item" aria-pressed="true"><span class="ab-taglist-item__dot"></span><span class="ab-taglist-item__label">海边</span><span class="ab-taglist-item__count">18</span></button>
+        <button class="ab-taglist-item" aria-pressed="true"><span class="ab-taglist-item__dot"></span><span class="ab-taglist-item__label">日落</span><span class="ab-taglist-item__count">7</span></button>
+        <button class="ab-taglist-item" aria-pressed="false"><span class="ab-taglist-item__dot"></span><span class="ab-taglist-item__label">雪景</span><span class="ab-taglist-item__count">3</span></button>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>7 · 开关与分段控件</h2>
+    <div class="demo">
+      <span class="demo__label">开关</span>
+      <button class="ab-switch" role="switch" aria-checked="true"></button>
+      <button class="ab-switch" role="switch" aria-checked="false"></button>
+      <button class="ab-switch" role="switch" aria-checked="true" disabled></button>
+    </div>
+    <div class="demo">
+      <span class="demo__label">匹配严格度</span>
+      <div class="ab-seg">
+        <button aria-pressed="false">宽松</button>
+        <button aria-pressed="true">适中</button>
+        <button aria-pressed="false">严格</button>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>8 · 徽章</h2>
+    <div class="demo">
+      <span class="ab-badge ab-badge--stat">分析中</span>
+      <span class="ab-badge ab-badge--accent">海边</span>
+      <span class="ab-badge ab-badge--ok"><span class="ab-badge__dot"></span>已分析</span>
+      <span class="ab-badge ab-badge--danger">分析失败</span>
+      <span class="ab-badge">等待分析</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>9 · 照片卡</h2>
+    <p class="note">图片用 <code>data-ready</code> 标记加载状态：未就绪时走骨架，避免懒加载导致的高度跳动。</p>
+    <div class="demo demo--col">
+      <div class="grid-demo">
+        <article class="ab-photo">
+          <img class="ab-photo__img" data-ready="true" alt="" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23f3b26b'/><stop offset='.55' stop-color='%23c96a3f'/><stop offset='1' stop-color='%236d3a2c'/></linearGradient></defs><rect width='400' height='300' fill='url(%23g)'/></svg>">
+          <button class="ab-photo__sel" aria-pressed="true" title="已选中"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></button>
+          <div class="ab-photo__caption">
+            <div class="ab-photo__name">海边日落.jpg</div>
+            <div class="ab-photo__tags"><span data-auto>海边</span><span data-auto>日落</span></div>
+          </div>
+        </article>
+
+        <article class="ab-photo">
+          <img class="ab-photo__img" data-ready="true" alt="" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%238fd6c0'/><stop offset='.6' stop-color='%233f8f7a'/><stop offset='1' stop-color='%231f4a41'/></linearGradient></defs><rect width='400' height='300' fill='url(%23g)'/></svg>">
+          <span class="ab-photo__stat ab-badge ab-badge--stat">分析中</span>
+          <div class="ab-photo__caption">
+            <div class="ab-photo__name">IMG_2043.jpg</div>
+            <div class="ab-photo__tags"><span>等待标签</span></div>
+          </div>
+        </article>
+
+        <article class="ab-photo">
+          <div class="ab-photo__img ab-skel" data-ready="false"></div>
+          <div class="ab-photo__caption">
+            <div class="ab-photo__name">加载中…</div>
+            <div class="ab-photo__tags"><span>骨架态</span></div>
+          </div>
+        </article>
+
+        <article class="ab-photo">
+          <img class="ab-photo__img" data-ready="true" alt="" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23c9d6e8'/><stop offset='.55' stop-color='%235f7796'/><stop offset='1' stop-color='%232b3a4f'/></linearGradient></defs><rect width='400' height='300' fill='url(%23g)'/></svg>">
+          <button class="ab-photo__sel" aria-pressed="false" title="未选中"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" opacity="0"><path d="M5 13l4 4L19 7"/></svg></button>
+          <span class="ab-photo__stat ab-badge ab-badge--danger">分析失败</span>
+          <div class="ab-photo__caption">
+            <div class="ab-photo__name">雪山.jpg</div>
+            <div class="ab-photo__tags"><span>可点击重试</span></div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>10 · 表格</h2>
+    <div class="demo demo--col">
+      <table class="ab-table">
+        <thead><tr><th>用户名</th><th>状态</th><th class="ab-table__num">照片数</th><th>注册时间</th><th></th></tr></thead>
+        <tbody>
+          <tr><td>xiaoming</td><td><span class="ab-badge ab-badge--ok"><span class="ab-badge__dot"></span>正常</span></td><td class="ab-table__num">128</td><td>2026-09-12</td><td><button class="ab-btn ab-btn--sm">停用</button></td></tr>
+          <tr><td>laowang</td><td><span class="ab-badge">已停用</span></td><td class="ab-table__num">64</td><td>2026-09-20</td><td><button class="ab-btn ab-btn--sm">启用</button></td></tr>
+          <tr><td>amy</td><td><span class="ab-badge ab-badge--accent">管理员</span></td><td class="ab-table__num">302</td><td>2026-08-01</td><td><button class="ab-btn ab-btn--sm" disabled>不可停用</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>11 · 空态与骨架</h2>
+    <div class="demo demo--col">
+      <div class="ab-empty">
+        <div class="ab-empty__icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="15" rx="3"/><circle cx="12" cy="12" r="3.2"/><path d="M8 5l1.4-2h5.2L16 5"/></svg></div>
+        <div class="ab-empty__title">这里还没有照片</div>
+        <div class="ab-empty__desc">上传几张照片，AI 会自动识别内容并生成标签，之后就能用一句话把它们找回来。</div>
+        <button class="ab-btn ab-btn--primary">＋ 上传照片</button>
+      </div>
+    </div>
+    <div class="demo demo--col">
+      <span class="demo__label">骨架（列表加载中）</span>
+      <div style="display:flex;flex-direction:column;gap:10px;width:100%">
+        <div class="ab-skel" style="height:16px;width:60%"></div>
+        <div class="ab-skel" style="height:16px;width:88%"></div>
+        <div class="ab-skel" style="height:16px;width:44%"></div>
+      </div>
+    </div>
+    <div class="demo">
+      <span class="demo__label">提示条</span>
+      <div class="ab-toast ab-toast--ok"><span class="ab-badge ab-badge--ok"><span class="ab-badge__dot"></span></span>已收藏 2 张照片</div>
+      <div class="ab-toast ab-toast--danger"><span class="ab-badge ab-badge--danger">!</span>上传失败：单张不得超过 20 MiB</div>
+    </div>
+    <hr class="ab-divider">
+    <p class="note">分隔线用 <code>.ab-divider</code>。</p>
+  </section>
+
+  <section>
+    <h2>12 · 浮层（真实可开关）</h2>
+    <p class="note">对话框与抽屉在这页里是可交互的，用来验证焦点环、遮罩层级和动效。</p>
+    <div class="demo">
+      <button class="ab-btn" id="open-dialog">打开对话框</button>
+      <button class="ab-btn" id="open-drawer">打开右侧抽屉</button>
+    </div>
+  </section>
+
+</div>
+
+<!-- 对话框 -->
+<div class="ab-scrim" id="scrim" hidden></div>
+<div class="ab-dialog" id="dialog" role="dialog" aria-modal="true" aria-label="新建相册" hidden>
+  <div class="ab-dialog__head">
+    <div>
+      <div class="ab-dialog__title">新建相册</div>
+      <div class="ab-dialog__sub">相册只对你的账户可见</div>
+    </div>
+    <button class="ab-btn ab-btn--icon ab-btn--ghost ab-dialog__close" data-close>✕</button>
+  </div>
+  <div class="ab-field">
+    <label for="album-name">相册名称</label>
+    <input class="ab-input" id="album-name" maxlength="80" placeholder="例如：2026 夏天">
+    <span class="ab-hint">最多 80 个字符</span>
+  </div>
+  <div class="ab-dialog__foot">
+    <button class="ab-btn ab-btn--ghost" data-close>取消</button>
+    <button class="ab-btn ab-btn--primary" data-close>创建</button>
+  </div>
+</div>
+
+<!-- 抽屉 -->
+<aside class="ab-drawer" id="drawer" role="dialog" aria-modal="true" aria-label="照片详情">
+  <div class="ab-drawer__head">
+    <strong style="font-size:var(--ab-fs-lg)">照片详情</strong>
+    <span class="spacer" style="flex:1"></span>
+    <button class="ab-btn ab-btn--icon ab-btn--ghost" data-close>✕</button>
+  </div>
+  <div class="ab-drawer__body">
+    <img class="ab-photo__img" style="border-radius:var(--ab-r);margin-bottom:var(--ab-sp-5)" alt="" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='600'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23f3b26b'/><stop offset='.55' stop-color='%23c96a3f'/><stop offset='1' stop-color='%236d3a2c'/></linearGradient></defs><rect width='800' height='600' fill='url(%23g)'/></svg>">
+    <div class="ab-field"><label for="dd1">照片名称</label><input class="ab-input" id="dd1" value="海边日落.jpg"></div>
+    <div class="ab-field" style="margin-top:var(--ab-sp-4)"><label for="dd2">标签（用逗号分隔）</label><input class="ab-input" id="dd2" value="海边, 日落"></div>
+    <p class="ab-hint" style="margin-top:var(--ab-sp-3)">AI 生成：海边（0.42）· 日落（0.38）</p>
+  </div>
+  <div class="ab-drawer__foot">
+    <button class="ab-btn ab-btn--ghost" data-close>取消</button>
+    <button class="ab-btn ab-btn--primary" data-close>保存修改</button>
+  </div>
+</aside>
+
+<script>
+(function () {
+  var KEY = 'aibum-theme';
+  var ok = ['auto','light','warm','forest','dark','midnight'];
+  var label = { auto:'跟随系统', light:'明亮', warm:'暖阳', forest:'森绿', dark:'暗房', midnight:'深蓝' };
+  var root = document.documentElement;
+
+  function resolve(c) { return c === 'auto' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : c; }
+  function apply(c) {
+    root.setAttribute('data-theme', resolve(c));
+    root.setAttribute('data-choice', c);
+    document.getElementById('cur-theme').textContent = '当前：' + label[c];
+    document.querySelectorAll('#themer button').forEach(function (b) { b.classList.toggle('on', b.dataset.set === c); });
+  }
+
+  var param = new URLSearchParams(location.search).get('theme');
+  var choice = ok.indexOf(param) >= 0 ? param : (localStorage.getItem(KEY) || 'auto');
+  apply(choice);
+
+  var btn = document.getElementById('theme-btn'), panel = document.getElementById('themer');
+  btn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    var open = panel.classList.toggle('open');
+    btn.setAttribute('aria-expanded', String(open));
+  });
+  panel.addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-set]');
+    if (!b) return;
+    localStorage.setItem(KEY, b.dataset.set);
+    apply(b.dataset.set);
+    panel.classList.remove('open');
+  });
+  document.addEventListener('click', function () { panel.classList.remove('open'); });
+
+  // 开关 / 分段控件 / 芯片 / 选中框 的本地状态切换（纯演示，不发请求）
+  document.querySelectorAll('.ab-switch').forEach(function (s) {
+    s.addEventListener('click', function () { if (!s.disabled) s.setAttribute('aria-checked', s.getAttribute('aria-checked') !== 'true'); });
+  });
+  document.querySelectorAll('.ab-seg').forEach(function (seg) {
+    seg.addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      seg.querySelectorAll('button').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+    });
+  });
+  document.querySelectorAll('.ab-chip, .ab-taglist-item, .ab-photo__sel').forEach(function (c) {
+    c.addEventListener('click', function () { c.setAttribute('aria-pressed', String(c.getAttribute('aria-pressed') !== 'true')); });
+  });
+
+  // 浮层
+  var scrim = document.getElementById('scrim'), dialog = document.getElementById('dialog'), drawer = document.getElementById('drawer');
+  function closeAll() { dialog.hidden = true; drawer.setAttribute('data-open', 'false'); scrim.hidden = true; }
+  document.getElementById('open-dialog').addEventListener('click', function () { scrim.hidden = false; dialog.hidden = false; });
+  document.getElementById('open-drawer').addEventListener('click', function () { scrim.hidden = false; drawer.setAttribute('data-open', 'true'); });
+  scrim.addEventListener('click', closeAll);
+  document.querySelectorAll('[data-close]').forEach(function (b) { b.addEventListener('click', closeAll); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeAll(); });
+})();
+</script>
+</body>
+</html>

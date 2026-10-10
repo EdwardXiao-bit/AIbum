@@ -1,0 +1,15 @@
+/* ==========================================================================
+   AIbum · 新前端骨架自测页自身的样式  web/css/next-demo.css
+   --------------------------------------------------------------------------
+   原先写在 web/next.html 的页内 <style> 里，被 app/main.py:180 的 CSP
+   （style-src 'self'，无 unsafe-inline / unsafe-hashes）拒绝执行，故外置。
+   下面是与原内联块**逐字相同**的内容。
+   ========================================================================== */
+    /* 仅自测页自身的排版，不属于组件层，也不是任何真实视图。
+       .panel / .stack / .row 用的是 base.css 里的工具类，这里不再重复定义。 */
+    dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px var(--sp-4); margin: 0; }
+    dt { color: var(--muted); }
+    dd { margin: 0; font-family: var(--font-mono); }
+    pre { margin: var(--sp-3) 0 0; padding: var(--sp-3); background: var(--sunken); border-radius: var(--r-sm); overflow: auto; font-size: var(--fs-sm); }
+    .toast-host { position: fixed; top: var(--sp-5); left: 50%; transform: translateX(-50%); z-index: var(--z-toast); }
+  

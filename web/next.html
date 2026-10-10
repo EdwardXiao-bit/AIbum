@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AIbum · 新前端骨架自测</title>
+
+  <!-- 防 FOUC（阶段 1 第 9 条）：放在 head 里、样式表之前，且必须是**外部同步脚本**
+       （不要 defer / async / type=module）。内联 script 标签会被 app/main.py:180 的 CSP
+       （script-src 'self'，无 unsafe-inline）拒绝执行，data-theme 就永远写不进去。
+       实现见 web/js/theme-boot.js，契约与 web/js/theme.js 一致。 -->
+  <script src="/static/js/theme-boot.js"></script>
+
+  <!-- 设计系统：阶段 2 已定稿去前缀，样式表搬到 web/css/。
+       后端把 web/ 挂在 /static，所以这里用绝对路径（相对路径在 /admin 下会解析错位置）。
+       三个文件都要引：tokens 给值、base 给 reset 与字阶、components 给组件。 -->
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/components.css">
+
+  <!-- 仅本自测页自身的排版（原先内联，被 CSP 拒绝），已外置 -->
+  <link rel="stylesheet" href="/static/css/next-demo.css">
+</head>
+<body>
+  <div class="toast-host">
+    <!-- 顶部提示条：由 store.toast 驱动，7 秒后自动消失（行为清单 0.6） -->
+    <p id="t-toast" class="toast" role="status" aria-live="polite" hidden></p>
+  </div>
+
+  <main class="stack container">
+    <header>
+      <h1>新前端骨架自测</h1>
+      <p class="lead">
+        这一页只验证阶段 1 的工程底座（api / store / router / theme / main），
+        没有任何真实视图。它不接管 <code>/</code>，也不影响 <code>web/index.html</code> 的旧前端。
+      </p>
+    </header>
+
+    <section class="panel">
+      <h2>1 · 启动流程（硬性要求 7 / 行为清单 0.8）</h2>
+      <p class="row">
+        <button id="t-reboot" class="btn btn--sm">重新 boot</button>
+        <span class="hint">GET /api/auth/me → 成功进工作区，失败回登录态</span>
+      </p>
+      <dl>
+        <dt>boot 结果</dt><dd id="t-boot">进行中…</dd>
+        <dt>入口 portal</dt><dd id="t-portal">—</dd>
+        <dt>store.view</dt><dd id="t-view">—</dd>
+        <dt>登录态</dt><dd id="t-user">—</dd>
+      </dl>
+    </section>
+
+    <section class="panel">
+      <h2>2 · 路由（硬性要求 8）</h2>
+      <p class="row">
+        <button class="btn btn--sm" data-hash="#/login">#/login</button>
+        <button class="btn btn--sm" data-hash="#/library">#/library</button>
+        <button class="btn btn--sm" data-hash="#/photo/abc123">#/photo/:id</button>
+        <button class="btn btn--sm" data-hash="#/admin">#/admin</button>
+        <button class="btn btn--sm" data-hash="#/nope">未知路由</button>
+      </p>
+      <dl>
+        <dt>location.pathname</dt><dd id="t-path">—</dd>
+        <dt>location.hash</dt><dd id="t-hash">—</dd>
+        <dt>解析结果</dt><dd id="t-route">—</dd>
+      </dl>
+      <p class="hint">在 <code>/admin</code> 打开本页（mock 服务把本页挂在 /admin）时，hash 为空必须被补成 <code>#/admin</code>。</p>
+    </section>
+
+    <section class="panel">
+      <h2>3 · 主题（硬性要求 9）</h2>
+      <p class="row" id="t-themes"></p>
+      <dl>
+        <dt>data-theme（生效）</dt><dd id="t-theme">—</dd>
+        <dt>data-choice（选择）</dt><dd id="t-choice">—</dd>
+        <dt>系统偏好</dt><dd id="t-system">—</dd>
+        <dt>localStorage['aibum-theme']</dt><dd id="t-stored">—</dd>
+      </dl>
+      <p class="hint">选 <code>auto</code> 后改系统深色偏好（CDP 的 Emulation.setEmulatedMedia），本页应即时跟随。</p>
+    </section>
+
+    <section class="panel">
+      <h2>4 · 通知（硬性要求 6 / 行为清单 0.6）</h2>
+      <p class="row">
+        <button id="t-toast-btn" class="btn btn--sm btn--primary">发一条通知</button>
+        <span id="t-toast-state" class="hint">未显示</span>
+      </p>
+      <p class="hint">7 秒后自动消失；新消息重置计时（NOTIFY_MS = 7000）。</p>
+    </section>
+
+    <section class="panel">
+      <h2>5 · 双计数器（硬性要求 4 / 5，行为清单 0.4 / 0.5）</h2>
+      <dl>
+        <dt>accountVersion</dt><dd id="t-acc">—</dd>
+        <dt>resultVersion</dt><dd id="t-res">—</dd>
+      </dl>
+      <p class="row">
+        <button id="t-demo-account" class="btn btn--sm">在途请求丢弃演示</button>
+        <button id="t-demo-result" class="btn btn--sm">旧响应丢弃演示</button>
+        <span class="hint">两个演示都需要一个 /api 后端（骨架自测用 mock 服务）。</span>
+      </p>
+      <pre id="t-demo-log">（未运行）</pre>
+    </section>
+
+    <section class="panel">
+      <h2>6 · 请求出口（硬性要求 1 / 2）</h2>
+      <dl>
+        <dt>最近一次请求</dt><dd id="t-last">—</dd>
+        <dt>X-AIbum-Request 回显</dt><dd id="t-header">—</dd>
+        <dt>errorMessage 三输入</dt><dd id="t-errors">（见 node 验收脚本）</dd>
+      </dl>
+      <p class="hint">请求头回显需要后端配合；真实后端不回显时这里显示"—"，由验收脚本另行核对。</p>
+    </section>
+  </main>
+
+  <script type="module" src="/static/js/next-demo.js"></script>
+</body>
+</html>

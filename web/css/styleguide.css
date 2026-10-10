@@ -1,0 +1,240 @@
+/* ==========================================================================
+   AIbum · 设计系统自查页自身的样式  web/css/styleguide.css
+   --------------------------------------------------------------------------
+   原先这一整块写在 web/styleguide.html 的页内 <style> 里。
+   app/main.py:180 对所有响应（含 /static/*）下发
+     Content-Security-Policy: ... style-src 'self'; ...
+   既没有 'unsafe-inline' 也没有 'unsafe-hashes'，实测浏览器直接拒绝：
+     "Applying inline style violates ... 'style-src 'self''"
+   —— 页面看着"没样式"，就是因为这段内联样式从未生效。外置成同源 CSS 文件后落在 'self' 之内。
+
+   第 1 段是原内联 <style> 的**原样**搬移（不重排、不改写）；
+   第 2 段是新加的具名类，用来替换原先散落在标记里的 style="..." 属性。
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1) 原内联 <style> 原样搬移
+   -------------------------------------------------------------------------- */
+/* --------------------------------------------------------------------------
+   本页自身的排版与自查工具，不属于组件层（不参与组件令牌验收）
+   -------------------------------------------------------------------------- */
+.top {
+  position: sticky; top: 0; z-index: var(--z-sticky);
+  display: flex; align-items: center; gap: var(--sp-4);
+  min-height: 64px; padding: var(--sp-2) var(--sp-7);
+  background: var(--glass); backdrop-filter: blur(14px);
+  border-bottom: var(--bw) solid var(--line);
+}
+.top h1 { font-size: var(--fs-lg); margin: 0; letter-spacing: -.4px; }
+.top .sub { color: var(--faint); font-size: var(--fs-sm); }
+.wrap { max-width: 1180px; margin: 0 auto; padding: var(--sp-7) var(--sp-7) 120px; }
+section { margin-bottom: var(--sp-8); }
+section > h2 {
+  font-size: var(--fs-xl); letter-spacing: -.6px; margin: 0 0 var(--sp-2);
+  padding-bottom: var(--sp-3); border-bottom: var(--bw) solid var(--line);
+}
+section > .note { color: var(--muted); font-size: var(--fs-sm); margin: 0 0 var(--sp-5); }
+.demo {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-4);
+  padding: var(--sp-5); margin-bottom: var(--sp-4);
+  background: var(--elev); border: var(--bw) solid var(--line); border-radius: var(--r);
+}
+.demo--col { flex-direction: column; align-items: stretch; }
+/* 下拉菜单演示：展开的菜单是绝对定位的，必须给它留出足够高度，
+   否则会盖到下一节（本页自查时就是靠截图发现的）。 */
+.demo--menu { min-height: 420px; align-items: flex-start; align-content: flex-start; row-gap: var(--sp-5); }
+/* 宽屏上预览"底部 sheet"形态：把 fixed 定位就地摆平，只借用它的外形 */
+.sheet-stage { position: relative; width: 100%; max-width: 520px; height: 560px; margin-inline: auto; }
+.sheet-stage .drawer--sheet { position: absolute; width: 100%; max-height: 100%; }
+.demo__label {
+  flex: none; width: 100%; font-size: var(--fs-xs); letter-spacing: var(--ls-label);
+  text-transform: uppercase; color: var(--faint); font-weight: var(--fw-bold);
+  margin-bottom: calc(var(--sp-3) * -1);
+}
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--sp-3); width: 100%; }
+.swatch { border: var(--bw) solid var(--line); border-radius: var(--r-sm); overflow: hidden; }
+.swatch .chipbox { height: 56px; }
+.swatch .meta { padding: 8px 10px; font-size: var(--fs-xs); background: var(--elev); }
+.swatch .meta b { display: block; font-size: var(--fs-sm); }
+.swatch .meta code { color: var(--faint); }
+.type-row { display: flex; align-items: baseline; gap: var(--sp-4); width: 100%; padding: 6px 0; border-bottom: var(--bw) dashed var(--line-soft); }
+.type-row .tag { flex: none; width: 130px; font-size: var(--fs-xs); color: var(--faint); }
+.radius-row { display: flex; gap: var(--sp-4); flex-wrap: wrap; }
+.radius-box { width: 84px; height: 68px; background: var(--sunken); border: var(--bw) solid var(--line); display: grid; place-items: center; font-size: var(--fs-xs); color: var(--muted); text-align: center; }
+.shadow-row { display: flex; gap: var(--sp-5); flex-wrap: wrap; }
+.shadow-box { width: 150px; height: 88px; background: var(--elev); border-radius: var(--r); display: grid; place-items: center; font-size: var(--fs-xs); color: var(--muted); }
+.grid-demo { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: var(--sp-5); width: 100%; }
+.cell { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
+.cell__tag { font-size: var(--fs-xs); color: var(--faint); }
+.ph { width: 100%; height: 100%; display: block; }
+
+/* 主题条：6 档并排。宽屏一行 6 个，中屏 3 个，窄屏 2 个 */
+.theme-strip { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--sp-3); width: 100%; align-items: start; }
+@media (max-width: 1180px) { .theme-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 640px)  { .theme-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.tcard { border: var(--bw) solid var(--line); border-radius: var(--r); overflow: hidden; align-self: start; }
+.tcard__body {
+  padding: var(--sp-4);
+  background: var(--bg);
+  color: var(--text);
+}
+.tcard__body .t {
+  font-size: var(--fs-base);
+  font-weight: var(--fw-medium);
+  margin-bottom: var(--sp-1);
+}
+.tcard__body .d { font-size: var(--fs-xs); color: var(--muted); margin-bottom: var(--sp-3); }
+.tcard__body .row { gap: var(--sp-2); }
+.tcard__foot {
+  padding: 6px 10px;
+  background: var(--elev);
+  border-top: var(--bw) solid var(--line);
+  font-size: var(--fs-xs);
+  color: var(--faint);
+}
+.tcard__foot b { color: var(--text); }
+
+/* 主题选择器 */
+.themer { position: absolute; top: 58px; right: var(--sp-7); width: 268px; padding: 8px;
+  background: var(--elev); border: var(--bw) solid var(--line); border-radius: var(--r);
+  box-shadow: var(--sh-2); display: none; z-index: var(--z-pop); }
+.themer.open { display: block; }
+.themer h4 { margin: 6px 8px 8px; font-size: var(--fs-xs); letter-spacing: var(--ls-eyebrow); text-transform: uppercase; color: var(--faint); }
+.sw-wrap { display: contents; }   /* 每个色块各自解析自己那一档的令牌 */
+.themer button { display: flex; align-items: center; gap: var(--sp-3); width: 100%; padding: 9px 10px;
+  border: 0; border-radius: 11px; background: transparent; color: var(--text); font: inherit; font-size: var(--fs-ctl); text-align: left; cursor: pointer; }
+.themer button:hover { background: var(--sunken); }
+.themer button.on { background: var(--accent-soft); color: var(--accent-ink); font-weight: var(--fw-medium); }
+.themer .sw { display: flex; gap: 3px; margin-left: auto; }
+.themer .sw i { width: 13px; height: 13px; border-radius: 4px; border: var(--bw) solid var(--line); }
+.themer hr { margin: 6px 4px; }
+
+/* 自查页专用的浮层摆放（不是组件样式） */
+.float-stage { position: relative; width: 100%; min-height: 420px; }
+.float-stage .popover { top: var(--sp-1); left: var(--sp-2); }
+.float-stage .menu { top: var(--sp-1); left: var(--sp-2); display: block; }
+
+/* --------------------------------------------------------------------------
+   2) 具名类：替换原先散落在标记里的 style="..." 属性
+   --------------------------------------------------------------------------
+   CSP 的 style-src 'self' 同样拒绝 style 属性，且实测报错里写得很清楚：
+     "Note that hashes do not apply to event handlers, style attributes and
+      javascript: navigations unless the 'unsafe-hashes' keyword is present."
+   本页没有 unsafe-hashes，所以色板/字阶/圆角/尺寸这些 demo 一律改成类名，
+   HTML 里不再出现任何 style 属性（可用 `grep -c 'style="' styleguide.html` 复核）。
+   需要按数据变化的尺寸仍可用 CSSOM（el.style.setProperty），那是 CSP 允许的 —— 见行为清单 E5。
+   -------------------------------------------------------------------------- */
+
+/* --- 色板色块 / 主题条小方块：一个具名类对应一个语义令牌 --- */
+.sw-bg { background: var(--bg); }
+.sw-elev { background: var(--elev); }
+.sw-sunken { background: var(--sunken); }
+.sw-line { background: var(--line); }
+.sw-line-soft { background: var(--line-soft); }
+.sw-text { background: var(--text); }
+.sw-muted { background: var(--muted); }
+.sw-faint { background: var(--faint); }
+.sw-accent { background: var(--accent); }
+.sw-accent-soft { background: var(--accent-soft); }
+.sw-accent-ink { background: var(--accent-ink); }
+.sw-primary-bg { background: var(--primary-bg); }
+.sw-ok { background: var(--ok); }
+.sw-warn { background: var(--warn); }
+.sw-danger { background: var(--danger); }
+.sw-danger-soft { background: var(--danger-soft); }
+.sw-stat-bg { background: var(--stat-bg); }
+.sw-overlay { background: var(--overlay); }
+.sw-scrim { background: var(--scrim); }
+/* 第 19 节的遮罩与玻璃：比色板多一层（scrim 浓度 / 背景模糊） */
+.sw-scrim-mix { background: color-mix(in srgb, var(--scrim) calc(var(--scrim-op) * 100%), transparent); }
+.sw-glass { background: var(--glass); backdrop-filter: blur(14px); }
+/* 那一排 160×80 的对照盒子共用的外形 */
+.sg-box { width: 160px; height: 80px; border-radius: var(--r); border: var(--bw) solid var(--line); }
+.sg-center { display: grid; place-items: center; }
+
+/* --- 字阶 demo：字号 + 字重 + 字距一起打包，避免 HTML 里写三条声明 --- */
+.ts-hero { font-size: var(--fs-hero); font-weight: var(--fw-black); letter-spacing: var(--ls-tight); }
+.ts-2xl { font-size: var(--fs-2xl); font-weight: var(--fw-black); }
+.ts-xl { font-size: var(--fs-xl); font-weight: var(--fw-bold); }
+.ts-lg { font-size: var(--fs-lg); font-weight: var(--fw-medium); }
+.ts-md { font-size: var(--fs-md); }
+.ts-base { font-size: var(--fs-base); }
+.ts-ctl { font-size: var(--fs-ctl); }
+.ts-sm { font-size: var(--fs-sm); color: var(--muted); }
+.ts-xs { font-size: var(--fs-xs); color: var(--faint); letter-spacing: var(--ls-wide); }
+/* 只改字号、不动字重（<strong> 与小标题用，避免把粗体压成中等） */
+.sg-fs-lg { font-size: var(--fs-lg); }
+
+/* --- 圆角 / 阴影 --- */
+.rb-xs { border-radius: var(--r-xs); }
+.rb-sm { border-radius: var(--r-sm); }
+.rb { border-radius: var(--r); }
+.rb-lg { border-radius: var(--r-lg); }
+.rb-pill { border-radius: var(--r-pill); }
+.bs-1 { box-shadow: var(--sh-1); }
+.bs-2 { box-shadow: var(--sh-2); }
+.bs-3 { box-shadow: var(--sh-3); }
+
+/* --- 间距尺：容器 + 九根柱子 --- */
+.sp-scale { display: flex; gap: var(--sp-3); align-items: flex-end; flex-wrap: wrap; width: 100%; }
+.sp-bar { width: var(--sp-9); background: var(--accent); }
+.sp-bar--1 { height: var(--sp-1); }
+.sp-bar--2 { height: var(--sp-2); }
+.sp-bar--3 { height: var(--sp-3); }
+.sp-bar--4 { height: var(--sp-4); }
+.sp-bar--5 { height: var(--sp-5); }
+.sp-bar--6 { height: var(--sp-6); }
+.sp-bar--7 { height: var(--sp-7); }
+.sp-bar--8 { height: var(--sp-8); }
+.sp-bar--9 { height: var(--sp-9); }
+
+/* --- 尺寸与摆放：原先一次性写死在 style 属性里的宽度/最小宽度/外边距 --- */
+.is-wide { width: 100%; }
+.sg-minw-200 { min-width: 200px; }
+.sg-minw-220 { min-width: 220px; }
+.sg-minw-240 { min-width: 240px; }
+.sg-minw-280 { min-width: 280px; }
+.sg-maxw-240 { max-width: 240px; }
+.sg-maxw-300 { max-width: 300px; }
+.sg-maxw-640 { max-width: 640px; }
+.sg-flex-1 { flex: 1; }
+.sg-top { align-items: flex-start; }
+.sg-gap-2 { --gap: var(--sp-2); }
+.sg-gap-5 { --gap: var(--sp-5); }
+.sg-col-220 { --col: 220px; }
+.sg-col-280 { --col: 280px; }
+.sg-col-320 { --col: 320px; }
+.sg-m0 { margin: 0; }
+.sg-mt-2 { margin-top: var(--sp-2); }
+.sg-mt-3 { margin-top: var(--sp-3); }
+.sg-mt-4 { margin-top: var(--sp-4); }
+/* 建议下拉的"就地摊平"形态（第 17 节）。
+   注意特异度：components.css 里有 `.popover[data-open="true"] { display: block }`（0,2,0），
+   比单类名（0,1,0）高。原来这条声明写在 style 属性里，靠"内联样式优先"压过它；
+   改成类名后必须补回同样的特异度，否则 display:flex 会被那条规则吃掉 ——
+   实测后果：建议项从整行宽（324px）缩成内容宽（75px），整页高度少 12px。
+   两者用 (0,3,0) 的复合选择器还原内联时的结果。 */
+.popover.sg-static-flex[data-open="true"],
+.sg-static-flex { position: static; display: flex; }
+.sg-static-block { position: static; display: block; }
+.sg-row-wrap { display: flex; gap: var(--sp-3); flex-wrap: wrap; }
+
+/* --- 骨架行：高度 + 宽度拆成两个正交的类 --- */
+.sg-skel-h14 { height: 14px; }
+.sg-skel-h16 { height: 16px; }
+.sg-w-40 { width: 40px; }
+.sg-w-64 { width: 64px; }
+.sg-w-76 { width: 76px; }
+.sg-w-90 { width: 90px; }
+.sg-w-44p { width: 44%; }
+.sg-w-60p { width: 60%; }
+.sg-w-88p { width: 88%; }
+
+/* --- 进度条填充比例 --- */
+.sg-fill-0 { width: 0%; }
+.sg-fill-38 { width: 38%; }
+.sg-fill-48 { width: 48%; }
+.sg-fill-62 { width: 62%; }
+
+/* --- 详情抽屉里的那张大图 --- */
+.sg-photo-lg { border-radius: var(--r); margin-bottom: var(--sp-5); }

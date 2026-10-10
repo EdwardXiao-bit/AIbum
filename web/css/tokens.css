@@ -1,0 +1,653 @@
+/* ==========================================================================
+   AIbum · 设计令牌  web/css/tokens.css
+   --------------------------------------------------------------------------
+   重建版：新旧前端不再共存于同一页面，迁移期用来避让的 `ab-` 前缀已全部去掉
+   （--ab-bg → --bg，.ab-btn → .btn）。旧 web/tokens.css 已随本次改动删除，
+   不存在两份并存的情况。
+
+   文件职责：只有"值"。这里不出现任何组件选择器；组件层只引用语义令牌，
+   所以换主题 = 换这一组值，组件代码一行不动。
+
+   分层：
+     1) 尺度令牌（跨主题不变）：字号 / 行高 / 字重 / 字距 / 间距 / 圆角 / 动效 / 层级 / 焦点环
+     2) 组件度量令牌：按钮高度、输入高度、开关尺寸……（同样跨主题不变）
+     3) 语义颜色令牌：6 档主题（light / warm / forest / dark / midnight + auto）
+
+   主题选择器写法（很重要）：
+     每一档主题都同时绑定在
+       :root[data-theme="x"]   —— 页面级换肤
+       裸 [data-theme="x"]     —— 任意子树换肤
+     后者是为了让自查页的"六档主题并排"卡片真正各自换肤（一张页面里同时看到
+     6 档取色）。两份都写在文件末尾，保证同特异性下按源序覆盖 :root 的默认值。
+
+   auto（跟随系统）不在这里写死：见文件末尾的 prefers-color-scheme 媒体查询 +
+   :root:not([data-theme])。JS 未执行时也不会先白后黑。
+
+   硬性约定：颜色 / 圆角 / 阴影 / 间距 / 字号一律走令牌，禁止在组件里写死色值。
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1) 尺度类令牌（跨主题不变）
+   -------------------------------------------------------------------------- */
+:root {
+  /* 字族 */
+  --font-sans: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Courier New", monospace;
+
+  /* 字号 */
+  --fs-xs:   11.5px;   /* 角标、计数 */
+  --fs-sm:   12.5px;   /* 次要说明、标签 */
+  --fs-base: 14px;     /* 正文 */
+  --fs-md:   15px;     /* 强调正文、输入框 */
+  --fs-lg:   17px;     /* 卡片标题 */
+  --fs-xl:   22px;     /* 区块标题 */
+  --fs-2xl:  28px;     /* 页面标题 */
+  --fs-hero: clamp(28px, 3.4vw, 42px);
+
+  /* 组件内的固定字号（不在上面的字阶里，但同样必须走令牌） */
+  --fs-ctl-sm:  12.5px;  /* 小按钮 / 小控件 */
+  --fs-ctl:     13.5px;  /* 默认按钮 / 列表项 */
+  --fs-ctl-lg:  15px;    /* 大按钮 */
+  --fs-caption: 14.5px;  /* 照片卡标题 */
+
+  /* 行高 */
+  --lh-tight: 1.25;
+  --lh-base:  1.6;
+  --lh-loose: 1.75;
+
+  /* 字重 */
+  --fw-normal: 400;
+  --fw-medium: 600;
+  --fw-bold:   700;
+  --fw-black:  800;
+
+  /* 字距 */
+  --ls-tight:  -1.2px;
+  --ls-normal: 0;
+  --ls-wide:   2px;
+  --ls-label:  1.2px;   /* 表格表头 / 小标签的全大写字母间距 */
+  --ls-eyebrow: 1.6px;  /* 分组标题 */
+
+  /* 间距（4 的倍数） */
+  --sp-1:  4px;
+  --sp-2:  8px;
+  --sp-3:  12px;
+  --sp-4:  16px;
+  --sp-5:  20px;
+  --sp-6:  24px;
+  --sp-7:  32px;
+  --sp-8:  40px;
+  --sp-9:  56px;
+
+  /* 圆角（暖阳主题会覆盖前四个） */
+  --r-xs:   7px;    /* 复选框这种很小的方块 */
+  --r-sm:   10px;
+  --r:      14px;
+  --r-lg:   18px;
+  --r-pill: 999px;
+
+  /* 边框宽度 */
+  --bw:       1px;
+  --bw-thick: 1.5px;
+
+  /* 动效 */
+  --dur:       .18s;
+  --dur-slow:  .32s;
+  --ease:      cubic-bezier(.16, 1, .3, 1);
+
+  /* 层级 */
+  --z-sticky: 10;
+  --z-pop:    30;   /* 下拉菜单 / 日历 / 工具提示 */
+  --z-drawer: 40;
+  --z-dialog: 50;
+  --z-toast:  60;
+
+  /* 焦点环 */
+  --ring-w: 3px;
+
+  /* 断点参考（写进注释，媒体查询里直接用数值）
+     --bp-sm: 640px   --bp-md: 900px
+     --bp-lg: 1180px  --bp-xl: 1480px */
+}
+
+/* --------------------------------------------------------------------------
+   1b) 组件度量令牌（跨主题不变，集中在这里方便整体调密度）
+   -------------------------------------------------------------------------- */
+:root {
+  --ctl-h-sm: 32px;
+  --ctl-h:    40px;
+  --ctl-h-lg: 48px;
+  --input-h:  44px;
+
+  --switch-w: 38px;
+  --switch-h: 22px;
+  --switch-knob: 16px;
+  --switch-pad:  3px;
+
+  --sel-size: 22px;         /* 照片卡左上角选择框 */
+  --mark-gap: 5px;          /* 芯片/徽章内图标与文字之间的间隙 */
+  --mark-gap-sm: 6px;       /* 更松一点：照片卡标签之间、圆点直径 */
+  --mark-gap-xs: 3px;       /* 最紧：开关伪元素、色卡小方块 */
+  --mark-pad-y: 3px;        /* 标签/徽章的竖直内边距 */
+  --mark-pad-x: 11px;       /* 芯片的水平内边距 */
+  --tag-pad-x: 9px;         /* 照片卡上标签的水平内边距 */
+  --menu-pad: 9px;          /* 菜单/列表条目的竖直内边距 */
+  --cell-pad: 13px;         /* 表格单元格的竖直内边距 */
+  --chip-inner: 4px;        /* 复选/关闭按钮的内缩 */
+
+  /* 浮层 / 目录宽度与高度上限 */
+  --menu-w: 184px;
+  --menu-max-h: 320px;
+  --cal-w: 288px;
+  --hint-max-w: 260px;
+  --opt-max-h: 220px;
+  --tip-max-w: 220px;
+
+  /* 文本域与带图标输入框 */
+  --area-min-h: 96px;
+  --input-icon-pad: 44px;
+
+  /* 照片卡四角元素的内缩 */
+  --side-gap: 12px;
+
+  /* 下拉箭头（.select 自绘）与玻璃模糊半径 */
+  --sel-arrow: 5px;
+  --sel-gap: 13px;
+  --blur-sm: 2px;
+  --blur: 4px;
+  --blur-lg: 14px;
+  --blur-pad: 3px;        /* 滚动条轨道留白 */
+
+  /* 复选框与滚动条 */
+  --check-size: 16px;
+  --scrollbar: 10px;
+
+  /* 微调偏移量（焦点环 / 悬停位移 / 提示位移） */
+  --ring-offset: 2px;
+  --hover-lift: 2px;
+  --hover-sink: 1px;
+  --tip-shift: 2px;
+
+  --btn-disabled-opacity: .5;
+  --busy-opacity: .65;
+
+  /* 无限滚动触发器 / 加载行的高度 */
+  --load-row-h: 64px;
+
+  /* 遮罩暗度 */
+  --scrim-op: .42;
+
+  /* 照片卡说明文字下面那层渐变的强度（压在图片上，与主题无关） */
+  --caption-a1: 0;
+  --caption-a2: .68;   /* 白照片 + 68% 压暗时正文仍 ≥ 4.5:1 */
+
+  /* 压在照片上的文字/标签/选择框（与主题无关：照片本身明暗不可控，
+     所以这里恒为白，不跟 --text/--invert 走；压暗层由 --overlay + --caption-a* 提供） */
+  --on-photo: #ffffff;
+  --tag-on-photo:      #ffffff2b;
+  --tag-on-photo-auto: #ffffffd9;
+  --ring-on-photo:     #ffffffcc;
+  --fill-on-photo:     #0000003a;
+
+  /* 开关滑块的投影（压在自绘轨道上，与主题无关） */
+  --knob-shadow: 0 1px 3px #0002;
+}
+
+/* --------------------------------------------------------------------------
+   2) 语义颜色令牌 · 默认档（明亮）
+   -------------------------------------------------------------------------- */
+:root {
+  color-scheme: light;   /* 默认主题（明亮）：纸白底 + 编辑式黑胶囊主按钮 */
+  --bg:             #fbfbf9;   /* 页面底 */
+  --elev:           #ffffff;   /* 卡片/浮层 */
+  --sunken:         #f4f4f1;   /* 内嵌槽、分段控件底 */
+  --line:           #e8e8e3;   /* 描边 */
+  --line-soft:      #f1f1ee;   /* 更弱的分隔 */
+  --text:           #14161a;   /* 主文字 */
+  --muted:          #696f79;   /* 对 bg/elev/sunken 都 ≥ 4.5:1 */
+  --faint:          #6a7075;   /* 11.5px 也是正文，同样 ≥ 4.5:1 */
+  --on-photo:       #ffffff;   /* 压 在照片上的文字（与主题无关，恒白） */
+  --tag-auto-ink:   #2a52e4;   /* 照片上「自动标签」芯片是浅底，字必须深到 4.5:1 */
+  --accent:         #2f5bff;   /* 强调色 */
+  --accent-ink:     #2f5bff;   /* 放在 --accent-soft 上的文字色 */
+  --accent-soft:    #eaefff;   /* 选中底 */
+  --on-accent:      #ffffff;   /* 压在 --accent 上的文字 */
+  --primary-bg:     #14161a;   /* 主按钮底 */
+  --primary-ink:    #ffffff;   /* 主按钮文字 */
+  --primary-hover:  #2a2d33;   /* 主按钮 hover */
+  --ok:             #1f8a52;   /* 成功 */
+  --warn:           #9a7415;   /* 警告 */
+  --danger:         #c0392b;   /* 错误 */
+  --danger-soft:    #fdf0ee;   /* 错误底 */
+  --stat-bg:        #ffffffeb;   /* “分析中”徽章底 */
+  --stat-ink:       #8a6100;   /* “分析中”徽章文字 */
+  --glass:          #ffffffcc;   /* 顶栏毛玻璃 */
+  --ring:           #2f5bff9e;   /* 焦点环：合成后对 bg 约 2.1~5.1:1（最弱是暖阳档），3px 环足够醒目 */
+  --overlay:        #14161a;   /* 照片卡渐变压暗基色 */
+  --overlay-soft:   #14161a;   /* 照片卡渐变上段基色 */
+  --scrim:          #0d1013;   /* 模态遮罩基色 */
+
+  --sh-1:           0 1px 2px #14161a0a, 0 8px 30px #14161a0d;
+  --sh-2:           0 2px 6px #14161a12, 0 18px 50px #14161a1a;
+  --sh-3:           0 24px 60px #14161a24;
+}
+
+/* --------------------------------------------------------------------------
+   3) auto：未设置 data-theme 时跟随系统，避免 JS 未执行时先白后黑
+   -------------------------------------------------------------------------- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --bg:             #0d1013;
+    --elev:           #15191d;
+    --sunken:         #1c2126;
+    --line:           #262c33;
+    --line-soft:      #1e242a;
+    --text:           #e9edf0;
+    --muted:          #98a2ac;
+    --faint:          #7f8992;
+    --on-photo:       #ffffff;
+    --tag-auto-ink:   #3b2c12;
+    --accent:         #ffb454;
+    --accent-ink:     #ffcf85;
+    --accent-soft:    #3b2c12;
+    --on-accent:      #1a1206;
+    --primary-bg:     #ffb454;
+    --primary-ink:    #1a1206;
+    --primary-hover:  #ffc266;
+    --ok:             #5fd08a;
+    --warn:           #ffcf6b;
+    --danger:         #ff8f7a;
+    --danger-soft:    #2a1a17;
+    --stat-bg:        #241d0e;
+    --stat-ink:       #ffcf6b;
+    --glass:          #11151abf;
+    --ring:           #ffb4549e;
+    --overlay:        #000000;
+    --overlay-soft:   #12100c;
+    --scrim:          #04060a;
+
+    --sh-1:  0 1px 0 #ffffff0a inset, 0 8px 24px #0006;
+    --sh-2:  0 16px 40px #0009;
+    --sh-3:  0 28px 70px #000b;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   4) 6 档主题的显式覆盖
+   --------------------------------------------------------------------------
+   顺序有意义：显式档必须排在 auto 之后，才能盖住自动跟随的取值。
+   每档都写两遍选择器——:root 给页面，裸属性给任意子树（自查页并排用）。
+   -------------------------------------------------------------------------- */
+
+/* light */
+:root[data-theme="light"] {
+  color-scheme: light;   /* 默认主题（明亮）：纸白底 + 编辑式黑胶囊主按钮 */
+  --bg:             #fbfbf9;   /* 页面底 */
+  --elev:           #ffffff;   /* 卡片/浮层 */
+  --sunken:         #f4f4f1;   /* 内嵌槽、分段控件底 */
+  --line:           #e8e8e3;   /* 描边 */
+  --line-soft:      #f1f1ee;   /* 更弱的分隔 */
+  --text:           #14161a;   /* 主文字 */
+  --muted:          #696f79;   /* 对 bg/elev/sunken 都 ≥ 4.5:1 */
+  --faint:          #6a7075;   /* 11.5px 也是正文，同样 ≥ 4.5:1 */
+  --on-photo:       #ffffff;   /* 压 在照片上的文字（与主题无关，恒白） */
+  --tag-auto-ink:   #2a52e4;   /* 照片上「自动标签」芯片是浅底，字必须深到 4.5:1 */
+  --accent:         #2f5bff;   /* 强调色 */
+  --accent-ink:     #2f5bff;   /* 放在 --accent-soft 上的文字色 */
+  --accent-soft:    #eaefff;   /* 选中底 */
+  --on-accent:      #ffffff;   /* 压在 --accent 上的文字 */
+  --primary-bg:     #14161a;   /* 主按钮底 */
+  --primary-ink:    #ffffff;   /* 主按钮文字 */
+  --primary-hover:  #2a2d33;   /* 主按钮 hover */
+  --ok:             #1f8a52;   /* 成功 */
+  --warn:           #9a7415;   /* 警告 */
+  --danger:         #c0392b;   /* 错误 */
+  --danger-soft:    #fdf0ee;   /* 错误底 */
+  --stat-bg:        #ffffffeb;   /* “分析中”徽章底 */
+  --stat-ink:       #8a6100;   /* “分析中”徽章文字 */
+  --glass:          #ffffffcc;   /* 顶栏毛玻璃 */
+  --ring:           #2f5bff9e;   /* 焦点环：合成后对 bg 约 2.1~5.1:1（最弱是暖阳档），3px 环足够醒目 */
+  --overlay:        #14161a;   /* 照片卡渐变压暗基色 */
+  --overlay-soft:   #14161a;   /* 照片卡渐变上段基色 */
+  --scrim:          #0d1013;   /* 模态遮罩基色 */
+
+  --sh-1:           0 1px 2px #14161a0a, 0 8px 30px #14161a0d;
+  --sh-2:           0 2px 6px #14161a12, 0 18px 50px #14161a1a;
+  --sh-3:           0 24px 60px #14161a24;
+}
+[data-theme="light"] {
+  color-scheme: light;   /* 默认主题（明亮）：纸白底 + 编辑式黑胶囊主按钮 */
+  --bg:             #fbfbf9;   /* 页面底 */
+  --elev:           #ffffff;   /* 卡片/浮层 */
+  --sunken:         #f4f4f1;   /* 内嵌槽、分段控件底 */
+  --line:           #e8e8e3;   /* 描边 */
+  --line-soft:      #f1f1ee;   /* 更弱的分隔 */
+  --text:           #14161a;   /* 主文字 */
+  --muted:          #696f79;   /* 对 bg/elev/sunken 都 ≥ 4.5:1 */
+  --faint:          #6a7075;   /* 11.5px 也是正文，同样 ≥ 4.5:1 */
+  --on-photo:       #ffffff;   /* 压 在照片上的文字（与主题无关，恒白） */
+  --tag-auto-ink:   #2a52e4;   /* 照片上「自动标签」芯片是浅底，字必须深到 4.5:1 */
+  --accent:         #2f5bff;   /* 强调色 */
+  --accent-ink:     #2f5bff;   /* 放在 --accent-soft 上的文字色 */
+  --accent-soft:    #eaefff;   /* 选中底 */
+  --on-accent:      #ffffff;   /* 压在 --accent 上的文字 */
+  --primary-bg:     #14161a;   /* 主按钮底 */
+  --primary-ink:    #ffffff;   /* 主按钮文字 */
+  --primary-hover:  #2a2d33;   /* 主按钮 hover */
+  --ok:             #1f8a52;   /* 成功 */
+  --warn:           #9a7415;   /* 警告 */
+  --danger:         #c0392b;   /* 错误 */
+  --danger-soft:    #fdf0ee;   /* 错误底 */
+  --stat-bg:        #ffffffeb;   /* “分析中”徽章底 */
+  --stat-ink:       #8a6100;   /* “分析中”徽章文字 */
+  --glass:          #ffffffcc;   /* 顶栏毛玻璃 */
+  --ring:           #2f5bff9e;   /* 焦点环：合成后对 bg 约 2.1~5.1:1（最弱是暖阳档），3px 环足够醒目 */
+  --overlay:        #14161a;   /* 照片卡渐变压暗基色 */
+  --overlay-soft:   #14161a;   /* 照片卡渐变上段基色 */
+  --scrim:          #0d1013;   /* 模态遮罩基色 */
+
+  --sh-1:           0 1px 2px #14161a0a, 0 8px 30px #14161a0d;
+  --sh-2:           0 2px 6px #14161a12, 0 18px 50px #14161a1a;
+  --sh-3:           0 24px 60px #14161a24;
+}
+
+/* warm */
+:root[data-theme="warm"] {
+  color-scheme: light;   /* 暖阳：偏暖纸张，圆角整体调大（14→20） */
+  --bg:             #fdf8f3;
+  --elev:           #ffffff;
+  --sunken:         #fbf3ea;
+  --line:           #f0e3d6;
+  --line-soft:      #f8efe6;
+  --text:           #3a2e24;
+  --muted:          #7d6c5e;   /* 对 bg/elev/sunken 都 ≥ 4.5:1 */
+  --faint:          #796d65;   /* 11.5px 也是正文 */
+  --on-photo:       #ffffff;   /* 图片上的字恒白 */
+  --tag-auto-ink:   #9c4118;   /* 深色才压得住浅色芯片 */
+  --accent:         #c0552c;   /* 压深到白字 4.5:1（原 #d9643a 只有 3.6） */
+  --accent-ink:     #a8481a;   /* accent-soft 上 ≥ 4.5:1 */
+  --accent-soft:    #fdeee7;
+  --on-accent:      #ffffff;
+  --primary-bg:     #c0552c;   /* 白字 4.59:1 */
+  --primary-ink:    #ffffff;
+  --primary-hover:  #cc6238;
+  --ok:             #4e7a3f;
+  --warn:           #9a7415;
+  --danger:         #c0392b;
+  --danger-soft:    #fdf0ee;
+  --stat-bg:        #fffbe8;
+  --stat-ink:       #7d5c10;   /* 徽章 4.5:1 */
+  --glass:          #fdf8f3e6;
+  --ring:           #d9643a9e;
+  --overlay:        #3a2e24;
+  --overlay-soft:   #6b4a2e;
+  --scrim:          #2b1c10;
+
+  --sh-1:           0 2px 4px #a8734d0f, 0 10px 26px #a8734d14;
+  --sh-2:           0 4px 10px #a8734d14, 0 20px 46px #a8734d20;
+  --sh-3:           0 26px 60px #a8734d28;
+
+  /* 圆角也一起变 */
+  --r-xs:           10px;
+  --r-sm:           14px;
+  --r:              20px;
+  --r-lg:           24px;
+}
+[data-theme="warm"] {
+  color-scheme: light;   /* 暖阳：偏暖纸张，圆角整体调大（14→20） */
+  --bg:             #fdf8f3;
+  --elev:           #ffffff;
+  --sunken:         #fbf3ea;
+  --line:           #f0e3d6;
+  --line-soft:      #f8efe6;
+  --text:           #3a2e24;
+  --muted:          #7d6c5e;   /* 对 bg/elev/sunken 都 ≥ 4.5:1 */
+  --faint:          #796d65;   /* 11.5px 也是正文 */
+  --on-photo:       #ffffff;   /* 图片上的字恒白 */
+  --tag-auto-ink:   #9c4118;   /* 深色才压得住浅色芯片 */
+  --accent:         #c0552c;   /* 压深到白字 4.5:1（原 #d9643a 只有 3.6） */
+  --accent-ink:     #a8481a;   /* accent-soft 上 ≥ 4.5:1 */
+  --accent-soft:    #fdeee7;
+  --on-accent:      #ffffff;
+  --primary-bg:     #c0552c;   /* 白字 4.59:1 */
+  --primary-ink:    #ffffff;
+  --primary-hover:  #cc6238;
+  --ok:             #4e7a3f;
+  --warn:           #9a7415;
+  --danger:         #c0392b;
+  --danger-soft:    #fdf0ee;
+  --stat-bg:        #fffbe8;
+  --stat-ink:       #7d5c10;   /* 徽章 4.5:1 */
+  --glass:          #fdf8f3e6;
+  --ring:           #d9643a9e;
+  --overlay:        #3a2e24;
+  --overlay-soft:   #6b4a2e;
+  --scrim:          #2b1c10;
+
+  --sh-1:           0 2px 4px #a8734d0f, 0 10px 26px #a8734d14;
+  --sh-2:           0 4px 10px #a8734d14, 0 20px 46px #a8734d20;
+  --sh-3:           0 26px 60px #a8734d28;
+
+  /* 圆角也一起变 */
+  --r-xs:           10px;
+  --r-sm:           14px;
+  --r:              20px;
+  --r-lg:           24px;
+}
+
+/* forest */
+:root[data-theme="forest"] {
+  color-scheme: light;   /* 森绿：低饱和绿，长时间浏览不累 */
+  --bg:             #f6f9f5;
+  --elev:           #ffffff;
+  --sunken:         #eef3ec;
+  --line:           #dfe8dc;
+  --line-soft:      #eaf1e8;
+  --text:           #1b2620;
+  --muted:          #5f6e5d;   /* 对 bg ≥ 4.5:1 */
+  --faint:          #657164;   /* 11.5px 也是正文 */
+  --on-photo:       #ffffff;   /* 图片上的字恒白 */
+  --tag-auto-ink:   #22492f;   /* 深色才压得住浅色芯片 */
+  --accent:         #2f6b4f;
+  --accent-ink:     #25543d;   /* accent-soft 上再压深一档 */
+  --accent-soft:    #e6f0e9;
+  --on-accent:      #ffffff;
+  --primary-bg:     #2f6b4f;
+  --primary-ink:    #ffffff;
+  --primary-hover:  #3a7c5c;
+  --ok:             #2f6b4f;
+  --warn:           #8a6100;
+  --danger:         #a8442f;
+  --danger-soft:    #fbeeeb;
+  --stat-bg:        #fffbe8;
+  --stat-ink:       #8a6100;
+  --glass:          #f6f9f5e6;
+  --ring:           #2f6b4f9e;
+  --overlay:        #1b2620;
+  --overlay-soft:   #2f4a3c;
+  --scrim:          #141d18;
+
+  --sh-1:           0 1px 2px #1b262008, 0 8px 26px #1b26200d;
+  --sh-2:           0 2px 6px #1b262012, 0 18px 44px #1b262018;
+  --sh-3:           0 24px 56px #1b262022;
+}
+[data-theme="forest"] {
+  color-scheme: light;   /* 森绿：低饱和绿，长时间浏览不累 */
+  --bg:             #f6f9f5;
+  --elev:           #ffffff;
+  --sunken:         #eef3ec;
+  --line:           #dfe8dc;
+  --line-soft:      #eaf1e8;
+  --text:           #1b2620;
+  --muted:          #5f6e5d;   /* 对 bg ≥ 4.5:1 */
+  --faint:          #657164;   /* 11.5px 也是正文 */
+  --on-photo:       #ffffff;   /* 图片上的字恒白 */
+  --tag-auto-ink:   #22492f;   /* 深色才压得住浅色芯片 */
+  --accent:         #2f6b4f;
+  --accent-ink:     #25543d;   /* accent-soft 上再压深一档 */
+  --accent-soft:    #e6f0e9;
+  --on-accent:      #ffffff;
+  --primary-bg:     #2f6b4f;
+  --primary-ink:    #ffffff;
+  --primary-hover:  #3a7c5c;
+  --ok:             #2f6b4f;
+  --warn:           #8a6100;
+  --danger:         #a8442f;
+  --danger-soft:    #fbeeeb;
+  --stat-bg:        #fffbe8;
+  --stat-ink:       #8a6100;
+  --glass:          #f6f9f5e6;
+  --ring:           #2f6b4f9e;
+  --overlay:        #1b2620;
+  --overlay-soft:   #2f4a3c;
+  --scrim:          #141d18;
+
+  --sh-1:           0 1px 2px #1b262008, 0 8px 26px #1b26200d;
+  --sh-2:           0 2px 6px #1b262012, 0 18px 44px #1b262018;
+  --sh-3:           0 24px 56px #1b262022;
+}
+
+/* dark */
+:root[data-theme="dark"] {
+  color-scheme: dark;   /* 暗房：暖琥珀强调，适合看照片 */
+  --bg:             #0d1013;
+  --elev:           #15191d;
+  --sunken:         #1c2126;
+  --line:           #262c33;
+  --line-soft:      #1e242a;
+  --text:           #e9edf0;
+  --muted:          #98a2ac;
+  --faint:          #7f8992;   /* sunken 上也要 ≥ 4.5:1 */
+  --on-photo:       #ffffff;   /* 同 light：照片明暗不可控，恒白 */
+  --tag-auto-ink:   #3b2c12;   /* 照片上的芯片是浅底，文字必须深色 */
+  --accent:         #ffb454;
+  --accent-ink:     #ffcf85;
+  --accent-soft:    #3b2c12;
+  --on-accent:      #1a1206;
+  --primary-bg:     #ffb454;
+  --primary-ink:    #1a1206;
+  --primary-hover:  #ffc266;
+  --ok:             #5fd08a;
+  --warn:           #ffcf6b;
+  --danger:         #ff8f7a;
+  --danger-soft:    #2a1a17;
+  --stat-bg:        #241d0e;
+  --stat-ink:       #ffcf6b;
+  --glass:          #11151abf;
+  --ring:           #ffb4549e;
+  --overlay:        #000000;
+  --overlay-soft:   #12100c;
+  --scrim:          #04060a;
+
+  --sh-1:           0 1px 0 #ffffff0a inset, 0 8px 24px #0006;
+  --sh-2:           0 16px 40px #0009;
+  --sh-3:           0 28px 70px #000b;
+}
+[data-theme="dark"] {
+  color-scheme: dark;   /* 暗房：暖琥珀强调，适合看照片 */
+  --bg:             #0d1013;
+  --elev:           #15191d;
+  --sunken:         #1c2126;
+  --line:           #262c33;
+  --line-soft:      #1e242a;
+  --text:           #e9edf0;
+  --muted:          #98a2ac;
+  --faint:          #7f8992;   /* sunken 上也要 ≥ 4.5:1 */
+  --on-photo:       #ffffff;   /* 同 light：照片明暗不可控，恒白 */
+  --tag-auto-ink:   #3b2c12;   /* 照片上的芯片是浅底，文字必须深色 */
+  --accent:         #ffb454;
+  --accent-ink:     #ffcf85;
+  --accent-soft:    #3b2c12;
+  --on-accent:      #1a1206;
+  --primary-bg:     #ffb454;
+  --primary-ink:    #1a1206;
+  --primary-hover:  #ffc266;
+  --ok:             #5fd08a;
+  --warn:           #ffcf6b;
+  --danger:         #ff8f7a;
+  --danger-soft:    #2a1a17;
+  --stat-bg:        #241d0e;
+  --stat-ink:       #ffcf6b;
+  --glass:          #11151abf;
+  --ring:           #ffb4549e;
+  --overlay:        #000000;
+  --overlay-soft:   #12100c;
+  --scrim:          #04060a;
+
+  --sh-1:           0 1px 0 #ffffff0a inset, 0 8px 24px #0006;
+  --sh-2:           0 16px 40px #0009;
+  --sh-3:           0 28px 70px #000b;
+}
+
+/* midnight */
+:root[data-theme="midnight"] {
+  color-scheme: dark;   /* 深蓝：冷青强调，偏工具感 */
+  --bg:             #0b1018;
+  --elev:           #121a26;
+  --sunken:         #182231;
+  --line:           #22303f;
+  --line-soft:      #1a2634;
+  --text:           #e6edf6;
+  --muted:          #93a3b8;
+  --faint:          #7d8a9b;   /* sunken 上也要 ≥ 4.5:1 */
+  --on-photo:       #ffffff;
+  --tag-auto-ink:   #12303c;   /* 照片上的芯片是浅底，文字必须深色 */
+  --accent:         #4cc9f0;
+  --accent-ink:     #7fd8f0;
+  --accent-soft:    #12303c;
+  --on-accent:      #04202a;
+  --primary-bg:     #4cc9f0;
+  --primary-ink:    #04202a;
+  --primary-hover:  #68d3f5;
+  --ok:             #5fd0a8;
+  --warn:           #ffcf6b;
+  --danger:         #ff8f7a;
+  --danger-soft:    #1c2430;
+  --stat-bg:        #0e2833;
+  --stat-ink:       #7fd8f0;
+  --glass:          #0b1018bf;
+  --ring:           #4cc9f09e;
+  --overlay:        #000000;
+  --overlay-soft:   #08101c;
+  --scrim:          #03060c;
+
+  --sh-1:           0 1px 0 #ffffff0a inset, 0 8px 24px #0006;
+  --sh-2:           0 16px 40px #0009;
+  --sh-3:           0 28px 70px #000b;
+}
+[data-theme="midnight"] {
+  color-scheme: dark;   /* 深蓝：冷青强调，偏工具感 */
+  --bg:             #0b1018;
+  --elev:           #121a26;
+  --sunken:         #182231;
+  --line:           #22303f;
+  --line-soft:      #1a2634;
+  --text:           #e6edf6;
+  --muted:          #93a3b8;
+  --faint:          #7d8a9b;   /* sunken 上也要 ≥ 4.5:1 */
+  --on-photo:       #ffffff;
+  --tag-auto-ink:   #12303c;   /* 照片上的芯片是浅底，文字必须深色 */
+  --accent:         #4cc9f0;
+  --accent-ink:     #7fd8f0;
+  --accent-soft:    #12303c;
+  --on-accent:      #04202a;
+  --primary-bg:     #4cc9f0;
+  --primary-ink:    #04202a;
+  --primary-hover:  #68d3f5;
+  --ok:             #5fd0a8;
+  --warn:           #ffcf6b;
+  --danger:         #ff8f7a;
+  --danger-soft:    #1c2430;
+  --stat-bg:        #0e2833;
+  --stat-ink:       #7fd8f0;
+  --glass:          #0b1018bf;
+  --ring:           #4cc9f09e;
+  --overlay:        #000000;
+  --overlay-soft:   #08101c;
+  --scrim:          #03060c;
+
+  --sh-1:           0 1px 0 #ffffff0a inset, 0 8px 24px #0006;
+  --sh-2:           0 16px 40px #0009;
+  --sh-3:           0 28px 70px #000b;
+}

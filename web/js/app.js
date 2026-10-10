@@ -28,6 +28,7 @@ import { createModals } from './components/modal.js';
 import { bindToast } from './components/toast.js';
 import { createAccountOverlays } from './views/account.js';
 import { createAuthView } from './views/auth.js';
+import { createLibraryView } from './views/library.js';
 import { PLACEHOLDERS, createPlaceholderView } from './views/placeholder.js';
 
 /** 取节点，缺了就立刻报错（缺节点是最容易静默失效的一类 bug）。 */
@@ -58,11 +59,12 @@ const nodes = {
 const modals = createModals({ scrim: nodes.scrim });
 const overlays = createAccountOverlays({ modals });
 const authView = createAuthView({ template: must('tpl-auth'), overlays });
+const libraryView = createLibraryView({ modals, navigate: (target, options) => router.navigate(target, options) });
 
-/** store.view → 视图。相册主界面 / 详情 / 后台是后续卡片，这里只放占位。 */
+/** store.view → 视图。照片详情 / 管理后台是后续卡片（F5 / F7），这里仍是占位。 */
 const views = {
   login: authView,
-  library: createPlaceholderView(PLACEHOLDERS.library),
+  library: libraryView,
   photo: createPlaceholderView(PLACEHOLDERS.photo),
   admin: createPlaceholderView(PLACEHOLDERS.admin),
 };

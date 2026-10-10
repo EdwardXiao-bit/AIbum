@@ -92,6 +92,8 @@ const state = {
   selected: new Set(),
   /** 结果集：列表/检索共用一个容器，mode 区分。 */
   results: emptyResults(),
+  /** GET /api/tags 的选项（标签云的原料；登出/换账户必须清空）。 */
+  tags: [],
   /** 路由参数，例如 #/photo/:id 的 {id}。 */
   routeParams: {},
   /** 详情数据（阶段 3.3 填充）。 */
@@ -104,6 +106,9 @@ const state = {
   busy: false,
   /** 顶部提示条：{text, visible, at}。 */
   toast: { text: '', visible: false, at: 0 },
+  /** 最近若干条通知的流水（只读用途：验收脚本要确定"这条报错是谁报的"，
+      光看 DOM 只能拿到最后一条，会被后续通知覆盖）。 */
+  toastLog: [],
   /** 0.4 账户版本：每次登录/登出/切回登录态递增，用于丢弃在途请求。 */
   accountVersion: 0,
   /** 0.5 结果版本：每次发起新的结果查询递增，用于丢弃旧响应。 */
@@ -163,6 +168,8 @@ let toastTimer = null;
 export function toast(text, options = {}) {
   const timeout = Number.isFinite(options.timeout) ? options.timeout : NOTIFY_MS;
   state.toast = { text: String(text ?? ''), visible: true, at: Date.now() };
+  state.toastLog.push(state.toast.text);
+  if (state.toastLog.length > 50) state.toastLog.shift();
   if (toastTimer !== null) clearTimeout(toastTimer);
   toastTimer = setTimeout(() => {
     toastTimer = null;
@@ -232,6 +239,7 @@ export function resetToLogin() {
   state.detail = null;
   state.health = null;
   state.users = [];
+  state.tags = [];
   state.filters = emptyFilters();
   clearSelection();
   clearResults();
@@ -260,6 +268,7 @@ export function enterWorkspace(user) {
   state.detail = null;
   state.health = null;
   state.users = [];
+  state.tags = [];
   state.filters = emptyFilters();
   state.routeParams = {};
   clearSelection();
@@ -349,6 +358,28 @@ export function resetFilters() {
   state.filters = emptyFilters();
   emit('filters', state.filters);
   return state.filters;
+}
+
+/* --------------------------------------------------------------------------
+   7b) 标签选项（行为清单 7.1：GET /tags 的结果，标签云用它）
+   --------------------------------------------------------------------------
+   注意与上面的 setTags 不是一回事：
+     setTags(names)       —— 写「筛选里选中的标签」（filters.tags）
+     setTagOptions(list)  —— 写「可选的标签清单」（state.tags，形状 [{name,count}]）
+   旧前端把这两件事混在 state.tags / state.tagOptions 两个字段里，重建时沿用后者的命名。
+   -------------------------------------------------------------------------- */
+
+/** 可选标签清单，后端已按频次降序返回。 */
+export function getTagOptions() {
+  return state.tags;
+}
+
+export function setTagOptions(list) {
+  state.tags = Array.isArray(list)
+    ? list.map(tag => ({ name: String(tag.name), count: Number(tag.count) || 0 }))
+    : [];
+  emit('tags', state.tags);
+  return state.tags;
 }
 
 /* --------------------------------------------------------------------------
@@ -504,5 +535,6 @@ export function __resetForTests() {
   state.users = [];
   state.busy = false;
   state.toast = { text: '', visible: false, at: 0 };
+  state.toastLog = [];
   emit('reset');
 }

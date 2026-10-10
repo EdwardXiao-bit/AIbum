@@ -1,0 +1,472 @@
+/* ==========================================================================
+   AIbum · 相册主界面  web/css/library.css
+   --------------------------------------------------------------------------
+   阶段 3.2（F4）。**只放这一个视图的排版**，全部选择器都挂在 .library 下面，
+   避免和认证视图 / 后续的详情视图抢样式。
+
+   设计意图（样张 B「明亮画廊」的落地）：
+     - 搜索区是页面主角：大标题 + 大搜索框 + 一行拖放区，占据首屏上半部
+     - 筛选收进左侧栏（窄屏变抽屉），不再像旧版那样把 6 个控件塞进 235px 的窄栏
+     - 结果网格用设计系统的照片卡（css/components.css §7 .photo）
+     - 标签是标签云（已选优先 + 频次排序），不是扁平 checkbox 长列表
+
+   规矩（与 tokens/base/components 一致）：
+     - 只引用令牌，**不写死颜色 / 圆角 / 阴影 / 间距 / 字号**（F2 定的：硬编码色值 0）
+     - 不用内联 style（CSP §0A E1/E5）；动态样式走 data-* 属性 + 这里的规则
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1) 整体骨架：hero（搜索区）在上，body（侧栏 + 结果）在下
+   -------------------------------------------------------------------------- */
+
+.library {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+}
+
+.library__hero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-7) var(--sp-7) var(--sp-6);
+  border: var(--bw) solid var(--line);
+  border-radius: var(--r-lg);
+  background:
+    radial-gradient(120% 160% at 12% -20%,
+      color-mix(in srgb, var(--accent) 12%, transparent) 0%,
+      transparent 62%),
+    var(--elev);
+  box-shadow: var(--sh-1);
+}
+
+.library__title { margin: 0; }
+.library__lead { margin: 0; max-width: 54ch; }
+
+/* --------------------------------------------------------------------------
+   2) 搜索区（主角）
+   -------------------------------------------------------------------------- */
+
+.library__search {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  margin-top: var(--sp-3);
+}
+
+.library__search-row {
+  display: flex;
+  align-items: stretch;
+  gap: var(--sp-3);
+}
+.library__search-field { flex: 1 1 auto; min-width: 0; }
+
+/* 大搜索框：比普通 input 高一档，字也大一档（--input-h 是 44px，这里给 56px） */
+.library__search-input {
+  height: calc(var(--input-h) + var(--sp-3));
+  font-size: var(--fs-md);
+  border-radius: var(--r-pill);
+  padding-inline: var(--sp-5);
+  box-shadow: var(--sh-1);
+}
+.library__search-input:disabled { cursor: not-allowed; }
+
+.library__submit { flex: none; border-radius: var(--r-pill); }
+.library__search-row .btn--lg { height: calc(var(--input-h) + var(--sp-3)); }
+
+/* 拖放区（行为清单 3.12 / 3.14）：可 Tab 聚焦，Enter/空格触发选择 */
+.library__drop {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  min-height: var(--input-h);
+  padding: var(--sp-2) var(--sp-4);
+  border: var(--bw) dashed var(--line);
+  border-radius: var(--r-sm);
+  background: var(--sunken);
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.library__drop:hover { border-color: var(--faint); }
+.library__drop[data-drag="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+.library__drop[data-state="set"] { border-style: solid; border-color: var(--accent); }
+.library__drop-prompt { flex: 1 1 auto; min-width: 0; }
+
+.library__ref { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; }
+.library__ref-thumb {
+  width: var(--sp-8); height: var(--sp-8);
+  object-fit: cover;
+  border-radius: var(--r-xs);
+  border: var(--bw) solid var(--line);
+  background: var(--elev);
+  flex: none;
+}
+.library__ref-name {
+  font-size: var(--fs-ctl);
+  color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  max-width: 40ch;
+}
+
+/* 严格度三档 + 模型提示 */
+.library__search-opts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-4);
+}
+.library__seg {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: var(--mark-gap-xs);
+  border: var(--bw) solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--sunken);
+}
+.library__seg-label {
+  font-size: var(--fs-xs);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--faint);
+  padding-inline: var(--sp-3) var(--sp-2);
+}
+.library__seg-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mark-gap);
+  padding: var(--mark-pad-y) var(--sp-4);
+  border-radius: var(--r-pill);
+  font-size: var(--fs-ctl);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.library__seg-item:hover { background: var(--elev); color: var(--text); }
+.library__seg-item[data-active="true"] {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-weight: var(--fw-medium);
+}
+/* 键盘用户：radio 是视觉隐藏的，焦点环画在 label 上 */
+.library__seg-item:focus-within {
+  outline: var(--ring-w) solid var(--ring);
+  outline-offset: var(--ring-offset);
+}
+
+.library__model-hint {
+  font-size: var(--fs-ctl);
+  color: var(--warn);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.library__model-hint::before {
+  content: "";
+  width: var(--sp-2); height: var(--sp-2);
+  border-radius: var(--r-pill);
+  background: currentColor;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+/* --------------------------------------------------------------------------
+   3) 工具条（筛选开关 + 模型状态）
+   -------------------------------------------------------------------------- */
+
+.library__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.library__drawer-toggle { display: none; }
+.library__status {
+  margin-left: auto;
+  font-size: var(--fs-ctl);
+  color: var(--muted);
+}
+.library__status[data-installed="false"] { color: var(--danger); }
+
+/* --------------------------------------------------------------------------
+   4) 两栏：筛选侧栏 + 结果区
+   -------------------------------------------------------------------------- */
+
+.library__body {
+  display: grid;
+  grid-template-columns: var(--library-side, 282px) minmax(0, 1fr);
+  gap: var(--sp-6);
+  align-items: start;
+}
+
+.library__side {
+  position: sticky;
+  top: calc(var(--topbar-h) + var(--sp-3));
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  padding: var(--sp-5);
+  border: var(--bw) solid var(--line);
+  border-radius: var(--r);
+  background: var(--elev);
+  box-shadow: var(--sh-1);
+  max-height: calc(100vh - var(--topbar-h) - var(--sp-7));
+}
+.library__side-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+}
+.library__side-title {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-black);
+  letter-spacing: var(--ls-tight);
+  margin: 0;
+}
+.library__filter-count {
+  margin-left: auto;
+  font-size: var(--fs-xs);
+  color: var(--faint);
+  text-align: right;
+}
+.library__side-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  overflow: auto;
+  padding-right: var(--blur-pad);
+}
+.library__dates {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--sp-3);
+}
+.library__switch-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.library__switch-row .label { flex: 1 1 auto; }
+.library__side-foot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  border-top: var(--bw) solid var(--line-soft);
+  padding-top: var(--sp-4);
+}
+
+/* --- 标签云（阶段 4.4：已选优先 + 频次排序；旧版是扁平 checkbox 长列表） --- */
+.library__tag-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.library__tag-head .label { flex: 1 1 auto; }
+.library__tagcloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mark-gap);
+  max-height: 34vh;
+  overflow: auto;
+}
+.library__tag {
+  max-width: 100%;
+  font-size: var(--fs-ctl-sm);
+}
+.library__tag-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.library__tag-empty { font-size: var(--fs-ctl); margin: 0; }
+
+/* --------------------------------------------------------------------------
+   5) 结果区：结果文案 / 检索说明 / 批量条 / 网格 / 空态 / 加载更多
+   -------------------------------------------------------------------------- */
+
+.library__results { display: flex; flex-direction: column; gap: var(--sp-4); min-width: 0; }
+.library__results-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-2) var(--sp-4);
+}
+.library__count {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-medium);
+  margin: 0;
+}
+.library__summary {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+
+.library__batch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border: var(--bw) solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--elev);
+  box-shadow: var(--sh-1);
+}
+/* 全选框复用的是照片卡上的 .photo__sel，但它这时不在照片上 → 换成页面色 */
+.library__select-all {
+  position: static;
+  border-color: var(--line);
+  background: var(--sunken);
+  color: var(--muted);
+}
+.library__select-all[aria-checked="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+.library__select-all[data-mixed="true"] {
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+}
+.library__selected {
+  font-size: var(--fs-ctl);
+  color: var(--muted);
+  min-width: 8ch;
+}
+.library__batch .select { width: auto; min-width: 9rem; }
+.library__batch .select--sm { height: var(--ctl-h-sm); font-size: var(--fs-ctl-sm); }
+
+/* 网格：沿用 components.css 的 .photo-grid，只调间距 */
+.library__grid { gap: var(--sp-5); }
+
+/* --------------------------------------------------------------------------
+   6) 照片卡的内容面（组件层 .photo 只给了封面与照片上的渐变标题栏；
+      明亮画廊要的是"图 + 白底内容块"，所以内容块在这里补）
+   -------------------------------------------------------------------------- */
+
+.library .photo { display: flex; flex-direction: column; }
+.library .photo__open {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  line-height: 0;
+}
+.library .photo__sel-mark { font-size: var(--fs-xs); line-height: 1; opacity: 0; }
+.library .photo__sel[aria-pressed="true"] .photo__sel-mark { opacity: 1; }
+
+/* 内容块：标题 + 副标题（相对档位 / 日期·状态）+ 标签 */
+.library .photo__caption {
+  position: static;
+  padding: var(--sp-3) var(--sp-4) var(--sp-1);
+  background: none;
+  color: var(--text);
+}
+.library .photo__name {
+  font-size: var(--fs-caption);
+  color: var(--text);
+  margin-bottom: var(--mark-gap-xs);
+}
+.library .photo__sub {
+  font-size: var(--fs-xs);
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+/* 档位：只区分"最匹配"，其余一视同仁（Q3：不显示任何小数） */
+.library .photo[data-tier="top"] .photo__sub { color: var(--accent-ink); font-weight: var(--fw-medium); }
+.library .photo[data-mode="search"] .photo__sub::before,
+.library .photo[data-mode="similar"] .photo__sub::before {
+  content: "相关度 ";
+  color: var(--faint);
+  font-weight: var(--fw-normal);
+}
+.library .photo[data-mode="search"][data-tier="top"] .photo__sub::before,
+.library .photo[data-mode="similar"][data-tier="top"] .photo__sub::before {
+  color: var(--accent-ink);
+}
+
+.library .photo__tagrow { padding: 0 var(--sp-4) var(--sp-4); }
+/* 卡片里的标签在浅底上（不是在照片上）→ 用页面色，不用 --on-photo */
+.library .photo__tags span {
+  background: var(--sunken);
+  color: var(--muted);
+  backdrop-filter: none;
+}
+.library .photo__tags span[data-auto] {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+.library .photo[data-selected="true"] {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 var(--bw) var(--accent), var(--sh-2);
+}
+.library .photo__stat {
+  top: var(--side-gap);
+  right: var(--side-gap);
+  position: absolute;
+}
+
+.library__empty { border: var(--bw) dashed var(--line); border-radius: var(--r); }
+.library__tail { display: flex; justify-content: center; }
+
+/* --------------------------------------------------------------------------
+   7) 上传入口（最小形态；完整队列归 F6）
+   -------------------------------------------------------------------------- */
+
+.library__main { display: flex; flex-direction: column; gap: var(--sp-5); min-width: 0; }
+.library__main-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.library__inline-note {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-left: auto;
+  font-size: var(--fs-ctl);
+  color: var(--muted);
+}
+.library__inline-note .progress { width: 12rem; }
+
+/* --------------------------------------------------------------------------
+   8) 浮层内容（新建相册 / 删除确认）
+   -------------------------------------------------------------------------- */
+
+.library__confirm-text {
+  font-size: var(--fs-md);
+  color: var(--text);
+  line-height: var(--lh-base);
+}
+
+/* --------------------------------------------------------------------------
+   9) 窄屏：筛选变抽屉（阶段 3.5 / D3 —— 功能不减少，只是换个摆法）
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 1080px) {
+  .library__body { grid-template-columns: minmax(0, 1fr); }
+  .library__drawer-toggle { display: inline-flex; }
+  .library__side {
+    position: static;
+    max-height: none;
+    display: none;
+  }
+  .library__side[data-open="true"] { display: flex; }
+  .library__search-row { flex-wrap: wrap; }
+  .library__search-field { flex: 1 1 100%; }
+}
+
+@media (max-width: 640px) {
+  .library__hero { padding: var(--sp-5); }
+  .library__dates { grid-template-columns: minmax(0, 1fr); }
+  .library__status { margin-left: 0; flex: 1 1 100%; }
+  .library__grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--sp-3); }
+  .library__ref-name { max-width: 18ch; }
+}

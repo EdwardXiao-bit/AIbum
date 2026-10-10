@@ -126,6 +126,8 @@ export function createModals(options) {
     closeAll,
     get current() { return current; },
     isOpen: dialog => Boolean(dialog) && !dialog.hidden,
+    /** 当前是否有任何浮层打开（视图用它决定要不要"打扰"用户，例如自动重载列表）。 */
+    isOpenAll: () => Boolean(current) && !current.hidden,
   };
 }
 

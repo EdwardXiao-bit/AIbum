@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="AIbum">
+  <rect width="64" height="64" rx="14" fill="#14161a"/>
+  <rect x="12" y="15" width="40" height="34" rx="6" fill="#fbfbf9"/>
+  <circle cx="24" cy="26" r="5" fill="#2f5bff"/>
+  <polygon points="15,46 28,30 37,41 43,34 50,43 50,46" fill="#3d8f6a"/>
+</svg>

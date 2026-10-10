@@ -1,0 +1,179 @@
+/* ==========================================================================
+   AIbum · 视图层  web/css/views.css
+   --------------------------------------------------------------------------
+   阶段 3 起，各视图自己的排版放这里。规矩（与 tokens/base/components 一致）：
+     - 只引用令牌，**不写死颜色 / 圆角 / 阴影 / 间距 / 字号**（F2 已定：硬编码色值 0）
+     - 组件长什么样由 css/components.css 决定，这里只负责"摆在哪、占多宽"
+     - 禁止内联 style（app/main.py:180 的 CSP 无 unsafe-inline / unsafe-hashes）
+
+   本文件当前覆盖【阶段 3.1 认证视图】所需：
+     1) 应用外壳：顶栏 + 主区（登录后才有内容，登录页顶栏只留品牌与入口链接）
+     2) 通知条容器（行为清单 0.6）
+     3) 认证视图两栏布局：左品牌 / 右表单（行为清单 1.10）
+     4) 占位视图（相册主界面 / 照片详情 / 管理后台属后续卡片，见 PROJECT.md F4/F5/F7）
+   ========================================================================== */
+
+:root {
+  /* 顶栏高度：只在视图层用（认证页的竖直居中要减掉它）。
+     属于"布局度量"，与 tokens.css 里的 --ctl-h / --menu-w 同类，故就近定义。 */
+  --topbar-h: 61px;
+}
+
+/* --------------------------------------------------------------------------
+   1) 应用外壳
+   -------------------------------------------------------------------------- */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  min-height: var(--topbar-h);
+  padding: var(--sp-3) var(--sp-6);
+  background: var(--glass);
+  backdrop-filter: blur(var(--blur-lg));
+  border-bottom: var(--bw) solid var(--line);
+}
+
+.topbar__brand {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-black);
+  letter-spacing: var(--ls-tight);
+  color: var(--text);
+  text-decoration: none;
+}
+.topbar__brand small {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--ls-label);
+  color: var(--faint);
+}
+
+.topbar__portal,
+.topbar__account { margin-left: auto; }
+.topbar__account {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.topbar__user {
+  font-size: var(--fs-ctl);
+  font-weight: var(--fw-medium);
+  color: var(--muted);
+  max-width: 22ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.topbar__portal {
+  font-size: var(--fs-ctl);
+  color: var(--muted);
+}
+
+.app-main {
+  padding: var(--sp-7) var(--sp-6) var(--sp-9);
+}
+.app-main > .container { padding-inline: 0; }
+
+/* --------------------------------------------------------------------------
+   2) 通知条（0.6：7 秒后自动消失，计时由 store.toast 管）
+   -------------------------------------------------------------------------- */
+
+.toast-host {
+  position: fixed;
+  top: var(--sp-5);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-toast);
+  max-width: calc(100vw - var(--sp-7));
+}
+
+/* --------------------------------------------------------------------------
+   3) 认证视图（行为清单 1.1 - 1.10）
+   -------------------------------------------------------------------------- */
+
+.auth {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr);
+  gap: var(--sp-9);
+  align-items: center;
+  min-height: calc(100vh - var(--topbar-h) - var(--sp-9));
+}
+
+.auth__brand {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+  min-width: 0;
+}
+.auth__title { margin: 0; }
+.auth__intro { margin: 0; }
+.auth__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-top: var(--sp-1);
+}
+/* 示例标签是"文案示例"，不是可点的筛选芯片 —— 用 .chip--plain 的静态态。 */
+.auth__tags .chip { font-size: var(--fs-ctl); }
+
+.auth__card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  padding: var(--sp-7);
+}
+.auth__card h2 { font-size: var(--fs-2xl); letter-spacing: var(--ls-tight); }
+.auth__sub { color: var(--muted); font-size: var(--fs-base); }
+.auth__buttons { display: flex; flex-direction: column; gap: var(--sp-2); }
+
+/* 恢复码：长 token，必须能换行读完，且一眼看出是"码"不是普通输入框 */
+.code-input {
+  height: auto;
+  min-height: var(--input-h);
+  padding: var(--sp-3) var(--sp-4);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-base);
+  word-break: break-all;
+  background: var(--sunken);
+}
+.code-hint { color: var(--muted); font-size: var(--fs-sm); }
+
+/* --------------------------------------------------------------------------
+   4) 占位视图
+   --------------------------------------------------------------------------
+   本卡（阶段 3.1）只交付认证视图；相册主界面（F4）/ 照片详情（F5）/ 管理后台（F7）
+   是独立卡片。这里只放一句诚实的占位，不做任何主界面结构，避免和后续卡片抢地盘。
+   -------------------------------------------------------------------------- */
+
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  align-items: flex-start;
+  max-width: 62ch;
+}
+.placeholder__list {
+  margin: 0;
+  padding-left: var(--sp-5);
+  color: var(--muted);
+  font-size: var(--fs-base);
+}
+.placeholder__list li { margin-block: var(--sp-1); }
+
+@media (max-width: 900px) {
+  .auth {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--sp-7);
+    align-items: start;
+    min-height: 0;
+  }
+  .topbar { padding-inline: var(--sp-4); }
+  .app-main { padding-inline: var(--sp-4); }
+}

@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AIbum · 智慧相册</title>
+
+  <!-- 图标：带上它浏览器就不再去要 /favicon.ico（那条 404 是 PROJECT.md「下一步」里记的） -->
+  <link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
+
+  <!-- 防 FOUC（行为清单 §0A E2）：head 里、样式表之前，**外部同步脚本**
+       （不加 defer / async / type=module）。内联脚本会被 app/main.py:180 的
+       CSP（script-src 'self'，无 unsafe-inline）拒绝，data-theme 就永远写不进去。
+       契约与 web/js/theme.js 的 INLINE_THEME_SCRIPT 一致。 -->
+  <script src="/static/js/theme-boot.js"></script>
+
+  <!-- 设计系统（阶段 2 定稿）：令牌 → 基础层 → 组件层 → 视图层。
+       绝对路径 /static/...：web/ 被挂在 /static，页面本身还会被挂在 / 与 /admin 下，
+       相对路径在 /admin 下会解析错位置。 -->
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/components.css">
+  <link rel="stylesheet" href="/static/css/views.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="topbar__brand" id="brand" href="#/library">AIbum<small>智慧相册</small></a>
+    <a class="topbar__portal" id="portal-link" href="/admin">管理员入口</a>
+    <div class="topbar__account" id="account" hidden>
+      <span class="topbar__user" id="username"></span>
+      <a class="btn btn--sm btn--ghost" id="library-link" href="#/library" hidden>我的相册</a>
+      <button class="btn btn--sm btn--ghost" id="security-button" type="button">账户安全</button>
+      <button class="btn btn--sm btn--ghost" id="admin-button" type="button" hidden>管理后台</button>
+      <button class="btn btn--sm" id="logout" type="button">退出</button>
+    </div>
+  </header>
+
+  <div class="toast-host">
+    <!-- 通知条（行为清单 0.6）：文案与 7 秒计时都在 store.toast 里，这里只被渲染 -->
+    <p class="toast" id="toast" role="status" aria-live="polite" hidden></p>
+  </div>
+
+  <main class="app-main">
+    <div class="container" id="view-root">
+      <!-- 首屏占位：/api/auth/me 返回前不闪错误的一屏（boot 完就被视图替换） -->
+      <section class="placeholder" id="boot-hint">
+        <p class="eyebrow">AIbum</p>
+        <p class="lead">正在检查登录状态…</p>
+      </section>
+    </div>
+  </main>
+
+  <!-- 浮层：共享一个遮罩（设计系统 css/components.css §10 的形态，与 styleguide 一致） -->
+  <div class="scrim" id="scrim" hidden></div>
+
+  <div class="dialog" id="dialog-security" role="dialog" aria-modal="true" aria-labelledby="security-title" hidden>
+    <div class="dialog__head">
+      <div>
+        <div class="dialog__title" id="security-title">账户安全</div>
+        <div class="dialog__sub">修改密码后，所有设备需重新登录。</div>
+      </div>
+      <button class="btn btn--icon btn--ghost dialog__close" type="button" data-close aria-label="关闭">✕</button>
+    </div>
+    <form class="stack" id="password-form">
+      <div class="field">
+        <label for="current-password">当前密码</label>
+        <input class="input" id="current-password" type="password" required minlength="8" maxlength="128" autocomplete="current-password">
+      </div>
+      <div class="field">
+        <label for="new-password">新密码</label>
+        <input class="input" id="new-password" type="password" minlength="8" maxlength="128" autocomplete="new-password">
+      </div>
+      <p class="code-hint">重新生成恢复码用的是上面的当前密码。</p>
+      <div class="dialog__foot">
+        <button class="btn btn--primary" type="submit">修改密码</button>
+        <button class="btn" id="rotate-code" type="button">重新生成恢复码</button>
+        <button class="btn btn--ghost" type="button" data-close>取消</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="dialog" id="dialog-forgot" role="dialog" aria-modal="true" aria-labelledby="forgot-title" hidden>
+    <div class="dialog__head">
+      <div>
+        <div class="dialog__title" id="forgot-title">找回密码</div>
+        <div class="dialog__sub">输入注册时保存的恢复码。成功后旧码立即失效。</div>
+      </div>
+      <button class="btn btn--icon btn--ghost dialog__close" type="button" data-close aria-label="关闭">✕</button>
+    </div>
+    <form class="stack" id="forgot-form">
+      <div class="field">
+        <label for="reset-name">用户名</label>
+        <input class="input" id="reset-name" required maxlength="20" autocomplete="username">
+      </div>
+      <div class="field">
+        <label for="reset-code">恢复码</label>
+        <input class="input code-input" id="reset-code" required maxlength="200" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="reset-password">新密码</label>
+        <input class="input" id="reset-password" type="password" required minlength="8" maxlength="128" autocomplete="new-password">
+      </div>
+      <div class="dialog__foot">
+        <button class="btn btn--primary" type="submit">重置密码</button>
+        <button class="btn btn--ghost" type="button" data-close>取消</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="dialog" id="dialog-recovery" role="dialog" aria-modal="true" aria-labelledby="recovery-title" hidden>
+    <div class="dialog__head">
+      <div>
+        <div class="dialog__title" id="recovery-title">保存你的恢复码</div>
+        <div class="dialog__sub">忘记密码时可以用它找回账户。请保存到密码管理器，不要分享给他人。此码只展示一次。</div>
+      </div>
+    </div>
+    <div class="field">
+      <label for="recovery-code">恢复码</label>
+      <input class="input code-input" id="recovery-code" readonly autocomplete="off">
+    </div>
+    <div class="dialog__foot">
+      <button class="btn btn--primary" id="download-code" type="button">下载恢复码</button>
+      <button class="btn btn--ghost" type="button" data-close>我已保存</button>
+    </div>
+  </div>
+
+  <!-- 认证视图的结构模板：文本在这里（1.10 的文案与 web/index.html L13 逐字一致），
+       views/auth.js 只克隆节点并接事件，不拼 HTML 字符串。 -->
+  <template id="tpl-auth">
+    <section class="auth">
+      <div class="auth__brand">
+        <p class="eyebrow">YOUR PHOTOS, CONNECTED</p>
+        <h1 class="hero auth__title" id="auth-hero">记得画面，<br>就能找到。</h1>
+        <p class="lead auth__intro" id="auth-intro">用一句描述、一张图片，或一个标签，<br>重新发现你的照片。</p>
+        <div class="auth__tags">
+          <span class="chip chip--plain">海边的日落</span>
+          <span class="chip chip--plain">一起吃过的美食</span>
+          <span class="chip chip--plain">可爱的猫咪</span>
+        </div>
+      </div>
+      <form class="panel auth__card" id="auth-form">
+        <h2 id="auth-title">登录你的相册</h2>
+        <p class="auth__sub" id="auth-sub">照片与检索结果仅对你的账户可见。</p>
+        <div class="field">
+          <label for="auth-name">用户名</label>
+          <input class="input" id="auth-name" name="username" required maxlength="20" autocomplete="username" placeholder="1–20 个字符">
+        </div>
+        <div class="field">
+          <label for="auth-password">密码</label>
+          <input class="input" id="auth-password" name="password" type="password" required minlength="8" maxlength="128" autocomplete="current-password" placeholder="至少 8 个字符">
+        </div>
+        <p class="error-text" id="auth-error" role="alert" hidden></p>
+        <div class="auth__buttons">
+          <button class="btn btn--primary btn--lg btn--block" type="submit" id="auth-submit">登录</button>
+          <button class="btn btn--ghost btn--block" type="button" id="auth-toggle">还没有账户？创建一个</button>
+          <button class="btn btn--ghost btn--block" type="button" id="forgot-button">忘记密码？</button>
+        </div>
+      </form>
+    </section>
+  </template>
+
+  <script type="module" src="/static/js/app.js"></script>
+</body>
+</html>

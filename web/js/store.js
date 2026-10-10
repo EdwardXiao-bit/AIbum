@@ -96,6 +96,8 @@ const state = {
   routeParams: {},
   /** 详情数据（阶段 3.3 填充）。 */
   detail: null,
+  /** 管理后台的用户列表（阶段 3.4 填充）。登出必须清空它——行为清单 1.5 明写"用户列表"。 */
+  users: [],
   /** GET /api/health 的结果（阶段 3.x 填充）。 */
   health: null,
   /** 是否有互斥的长任务在跑（上传/批量/检索）。 */
@@ -221,7 +223,7 @@ function clearResults() {
   state.results = emptyResults();
 }
 
-/** 进入登录态（0.3 / 1.5）：清空用户、照片、选中、筛选、详情、结果集。 */
+/** 进入登录态（0.3 / 1.5）：清空用户、照片、选中、筛选、详情、用户列表。 */
 export function resetToLogin() {
   bumpAccountVersion();
   state.user = null;
@@ -229,6 +231,7 @@ export function resetToLogin() {
   state.busy = false;
   state.detail = null;
   state.health = null;
+  state.users = [];
   state.filters = emptyFilters();
   clearSelection();
   clearResults();
@@ -256,6 +259,7 @@ export function enterWorkspace(user) {
   state.busy = false;
   state.detail = null;
   state.health = null;
+  state.users = [];
   state.filters = emptyFilters();
   state.routeParams = {};
   clearSelection();
@@ -472,6 +476,13 @@ export function setHealth(health) {
   return state.health;
 }
 
+/** 管理后台的用户列表（阶段 3.4 用；登出时由 resetToLogin 清空）。 */
+export function setUsers(users) {
+  state.users = Array.isArray(users) ? [...users] : [];
+  emit('users', state.users);
+  return state.users;
+}
+
 /* --------------------------------------------------------------------------
    10) 测试与调试用：整体重置（只给 next.html 自测页和单测用）
    -------------------------------------------------------------------------- */
@@ -490,6 +501,7 @@ export function __resetForTests() {
   state.routeParams = {};
   state.detail = null;
   state.health = null;
+  state.users = [];
   state.busy = false;
   state.toast = { text: '', visible: false, at: 0 };
   emit('reset');

@@ -1,0 +1,58 @@
+{
+  "model": "OFA-Sys/chinese-clip-vit-base-patch16@36e679e65c2a2fead755ae21162091293ad37834",
+  "sources": {
+    "cat": "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/coco_sample.png",
+    "dog": "https://raw.githubusercontent.com/pytorch/hub/master/images/dog.jpg"
+  },
+  "queries": [
+    {
+      "text": "两只猫",
+      "top1": "cat",
+      "scores": [
+        0.43840789794921875,
+        0.3184264898300171
+      ],
+      "elapsed_ms": 44
+    },
+    {
+      "text": "一只狗",
+      "top1": "dog",
+      "scores": [
+        0.40498775243759155,
+        0.3501399755477905
+      ],
+      "elapsed_ms": 26
+    }
+  ],
+  "scope": "two-photo smoke test only",
+  "cold_analysis_seconds": 9.167,
+  "tags": {
+    "cat": [
+      {
+        "name": "室内",
+        "kind": "场景",
+        "source": "auto",
+        "score": 0.3850254714488983
+      },
+      {
+        "name": "猫",
+        "kind": "物体",
+        "source": "auto",
+        "score": 0.4056664705276489
+      }
+    ],
+    "dog": [
+      {
+        "name": "狗",
+        "kind": "物体",
+        "source": "auto",
+        "score": 0.41295474767684937
+      }
+    ]
+  },
+  "synthetic_500_rank_ms": {
+    "p50": 10.96,
+    "p95": 13.28
+  },
+  "device": "cpu"
+}

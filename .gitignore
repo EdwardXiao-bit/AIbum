@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+.pytest_cache/
+data/
+models/
+tmp/
+*.log
+.env
+/*.doc
+/*.zip
+docs/需求原文.txt
+docs/CLIP哈希论文摘读.txt

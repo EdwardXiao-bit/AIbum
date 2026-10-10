@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AIbum · 智慧相册</title><link rel="stylesheet" href="/static/style.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <header><a class="brand" href="/">AIbum<span>智慧相册</span></a><a id="portal-link" href="/admin">管理员入口</a><div id="account" hidden><span id="username"></span><a id="library-link" href="/" hidden>我的相册</a><button id="security-button" class="quiet">账户安全</button><button id="admin-button" class="quiet" hidden>管理后台</button><button id="logout" class="quiet">退出</button></div></header>
+  <div id="notice" role="status" aria-live="polite" hidden></div>
+  <main>
+    <section id="auth" class="auth">
+      <div><p class="eyebrow">YOUR PHOTOS, CONNECTED</p><h1>记得画面，<br>就能找到。</h1><p class="intro">用一句描述、一张图片，或一个标签，<br>重新发现你的照片。</p><div class="sample-tags"><span>海边的日落</span><span>一起吃过的美食</span><span>可爱的猫咪</span></div></div>
+      <form id="auth-form" class="panel"><h2 id="auth-title">登录你的相册</h2><p>照片与检索结果仅对你的账户可见。</p><label>用户名<input id="auth-name" required maxlength="20" autocomplete="username" placeholder="1–20 个字符"></label><label>密码<input id="auth-password" type="password" required minlength="8" maxlength="128" autocomplete="current-password" placeholder="至少 8 个字符"></label><button type="submit" id="auth-submit" class="primary">登录</button><button type="button" id="auth-toggle" class="quiet">还没有账户？创建一个</button><button type="button" id="forgot-button" class="quiet">忘记密码？</button><p id="auth-error" class="error" role="alert"></p></form>
+    </section>
+    <section id="workspace" hidden>
+      <div class="heading"><div><p class="eyebrow">PERSONAL LIBRARY</p><h1>我的照片</h1><p id="model-status" class="muted">正在检查分析服务…</p></div><label class="button primary" for="upload">＋ 上传照片<input id="upload" class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp" multiple></label></div>
+      <div id="upload-progress" class="panel" hidden><label for="progress" id="upload-label">正在上传</label><progress id="progress" max="100" value="0"></progress></div>
+      <div class="library-layout">
+      <aside class="filter-sidebar" aria-label="照片筛选">
+        <div class="filter-title"><h2>标签</h2><button id="clear-tags" type="button" class="quiet">清空</button></div>
+        <p class="filter-help">勾选后立即筛选 · 多选匹配任一标签</p>
+        <input id="tag-keyword" aria-label="查找标签" placeholder="查找标签" type="search">
+        <div id="tag-options" class="tag-options"></div>
+        <div class="filters"><label>相册<select id="album-filter"><option value="">所有相册</option></select></label><label>地点<input id="location-filter" placeholder="输入地点" maxlength="200"></label><label>开始日期<input id="start-filter" type="date"></label><label>结束日期<input id="end-filter" type="date"></label><label>排序<select id="order"><option value="newest">最新在前</option><option value="oldest">最早在前</option></select></label><label class="check"><input id="favorite-filter" type="checkbox"> 仅收藏</label><button type="button" id="apply-filters">应用筛选</button><button type="button" id="clear-filters" class="quiet">清空所有筛选</button></div>
+      </aside>
+      <div class="library-content">
+      <form id="search-form" class="search-panel">
+        <div class="search-row"><label class="grow"><span class="visually-hidden">文字描述</span><input id="query" maxlength="500" placeholder="描述你想找的画面，例如：阳光下草地上的小狗"></label><label class="button" for="reference">以图搜索<input id="reference" class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp"></label><button type="submit" class="primary" id="search-button">搜索</button><button type="button" id="reset-search" class="quiet">全部照片</button></div>
+        <div id="reference-drop" class="reference-drop" role="button" tabindex="0" aria-label="拖拽或点击选择参考图">
+          <span id="drop-prompt">将参考图片拖到这里，或点击选择图片</span>
+          <div id="reference-info" hidden><img id="reference-preview" alt="参考图预览"><span id="reference-name"></span><button type="button" id="clear-reference" class="quiet">移除参考图</button></div>
+        </div>
+        <div class="search-settings"><label>匹配严格度<select id="strictness"><option value="broad">宽松 · 更多相关结果</option><option value="balanced" selected>适中 · 推荐</option><option value="strict">严格 · 更接近的结果</option></select></label><span class="muted">低相关照片会被过滤，未找到合适图片时显示空结果。</span></div>
+      </form>
+      <div class="toolbar"><p id="result-label" aria-live="polite">加载中…</p><div><button id="new-album" class="quiet">新建相册</button><button id="refresh" class="quiet">刷新</button></div></div>
+      <p id="search-summary" class="search-summary" hidden></p>
+      <div id="batch" class="batch"><label class="check"><input id="select-all" type="checkbox"> 全选当前结果</label><span id="selected-count">已选 0 张</span><button id="batch-favorite">收藏所选</button><select id="batch-album" aria-label="移动所选照片到相册"><option value="">移出相册</option></select><button id="batch-move">移动所选</button><button id="batch-delete" class="danger">删除所选</button></div>
+      <div id="grid" class="grid"></div><div id="empty" class="empty" hidden><h2>这里还没有照片</h2><p>上传照片后即可浏览。完成 AI 分析的照片可以参与语义搜索。</p></div>
+      <div class="pagination"><button id="load-more" hidden>加载更多</button></div>
+      </div></div>
+    </section>
+    <section id="admin-workspace" hidden>
+      <div class="heading"><div><p class="eyebrow">ADMINISTRATION</p><h1>管理控制台</h1><p class="muted">管理账户、查看使用情况与服务状态。</p></div><button id="admin-refresh">刷新数据</button></div>
+      <div class="admin-stats"><div><span>注册用户</span><strong id="stat-users">—</strong></div><div><span>正常账户</span><strong id="stat-active">—</strong></div><div><span>照片总量</span><strong id="stat-photos">—</strong></div><div><span>分析失败</span><strong id="stat-failed">—</strong></div></div>
+      <div class="admin-service"><span id="admin-model-status"></span><span id="admin-storage"></span></div>
+      <section class="panel"><div class="admin-toolbar"><h2>用户管理</h2><input id="admin-search" type="search" placeholder="搜索用户名" aria-label="搜索用户名"><select id="admin-status-filter" aria-label="账户状态筛选"><option value="all">全部状态</option><option value="active">正常</option><option value="disabled">已停用</option></select></div><p class="muted">停用账户后立即退出所有会话，用户照片会保留。</p><div class="table-scroll"><table class="users-table"><thead><tr><th>用户</th><th>注册日期</th><th>照片数量</th><th>状态</th><th>操作</th></tr></thead><tbody id="admin-users"></tbody></table></div><p id="admin-empty" hidden>没有符合条件的用户。</p></section>
+    </section>
+  </main>
+  <dialog id="security" class="small-dialog"><form id="password-form"><h2>账户安全</h2><label>当前密码<input id="current-password" type="password" required minlength="8" maxlength="128" autocomplete="current-password"></label><label>新密码<input id="new-password" type="password" minlength="8" maxlength="128" autocomplete="new-password"></label><p class="muted">修改密码后，所有设备需重新登录。</p><div class="detail-actions"><button class="primary" type="submit">修改密码</button><button id="rotate-code" type="button">重新生成恢复码</button><button type="button" data-close="security">取消</button></div></form></dialog>
+  <dialog id="forgot" class="small-dialog"><form id="forgot-form"><h2>找回密码</h2><p class="muted">输入注册时保存的恢复码。成功后旧码立即失效。</p><label>用户名<input id="reset-name" required maxlength="20" autocomplete="username"></label><label>恢复码<input id="reset-code" required maxlength="200" autocomplete="off"></label><label>新密码<input id="reset-password" type="password" required minlength="8" maxlength="128" autocomplete="new-password"></label><div class="detail-actions"><button type="submit" class="primary">重置密码</button><button type="button" data-close="forgot">取消</button></div></form></dialog>
+  <dialog id="recovery" class="small-dialog"><h2>保存你的恢复码</h2><p>忘记密码时可以用它找回账户。请保存到密码管理器，不要分享给他人。此码只展示一次。</p><label>恢复码<input id="recovery-code" readonly autocomplete="off"></label><div class="detail-actions"><button id="download-code" class="primary">下载恢复码</button><button type="button" data-close="recovery">我已保存</button></div></dialog>
+  <dialog id="detail"><button id="close-detail" class="close" aria-label="关闭详情">×</button><div class="detail-layout"><img id="detail-image" alt="照片预览"><form id="detail-form"><p class="eyebrow">PHOTO DETAILS</p><h2>照片详情</h2><p id="detail-meta" class="muted"></p><label>照片名称<input id="detail-name" required maxlength="200"></label><label>地点<input id="detail-location" maxlength="200" placeholder="可手动填写"></label><label>所属相册<select id="detail-album"><option value="">未归入相册</option></select></label><label>标签（用逗号分隔）<input id="detail-tags" placeholder="旅行, 海边"></label><p id="detail-auto" class="muted"></p><label class="check"><input id="detail-favorite" type="checkbox"> 收藏这张照片</label><p id="detail-state"></p><div class="detail-actions"><button class="primary" type="submit">保存修改</button><button id="detail-similar" type="button">找相似</button><button id="detail-retry" type="button">重新分析</button><a id="detail-download" class="button">下载原图</a></div></form></div></dialog>
+</body>
+</html>

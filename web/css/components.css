@@ -62,6 +62,12 @@
     animation: none !important;
   }
   .spinner { animation: none !important; }
+  /* .loader 原来漏在这张名单外：三点跳动（§13）与横条进度都是 animation，
+     不停掉就等于"开了减少动效系统仍然在动"。本卡（轻量两项③）补上。 */
+  .loader, .loader__dots, .loader__dots i, .loader__bar, .loader__bar::after {
+    animation: none !important;
+    transition: none !important;
+  }
   .skel { animation: none !important; background: var(--sunken); }
 }
 
@@ -649,8 +655,63 @@
   box-shadow: var(--sh-2);
   font-size: var(--fs-base);
 }
-.toast--ok     { border-color: color-mix(in srgb, var(--ok) 35%, transparent); }
-.toast--danger { border-color: color-mix(in srgb, var(--danger) 35%, transparent); }
+/* 文案位：占满剩余宽度（图标位是固定 20px 的圆形徽标） */
+.toast__text { min-width: 0; }
+
+/* 语气变体（落实卡「轻量两项」②）
+   --------------------------------------------------------------------------
+   改动前：`.toast--ok` / `.toast--danger` 在**应用里从未被用过**，通知条只有
+   `hidden` + `textContent` —— 成功与失败**长得一模一样**（编排者运行时实测）。
+   现在三种语气：默认（信息性，见下）/ `--ok` / `--danger`。
+
+   硬要求：**失败态不能只靠颜色**。所以两种变体各有一枚**字形不同**的图标
+   （✓ / !），灰度截图、色觉障碍下同样能分辨；颜色只是加强。
+
+   图标为什么是"空 span + ::before 画字"而不是把字写进 DOM：
+     `#toast.textContent` 必须**逐字等于**通知文案 —— `_verify-f3-auth.mjs:436`
+     与 `:479/:487` 就是拿 textContent 做全等的（'密码已重置，请保存新恢复码，然后登录'）。
+     写进 DOM 会让 textContent 多出 '✓' 前缀，那条已通过的基线会静默变红。
+     ::before 的 content **不进** textContent，图形照样渲染、照样进截图。
+
+   默认语气**没有任何装饰**（图标位 display:none）：升级前的中性通知逐像素不变，
+   改动只影响真正被标注了语气的那些。 */
+.toast__icon { display: none; }
+
+.toast--ok,
+.toast--danger { font-weight: var(--fw-medium); }
+
+.toast--ok {
+  border-color: color-mix(in srgb, var(--ok) 45%, transparent);
+  /* 没有 --ok-soft 令牌（只有 --danger-soft）：与 .badge--ok 同法用 color-mix 合成，
+     免得为 6 档主题 ×2 各加一个只服务提示条的令牌。 */
+  background: color-mix(in srgb, var(--ok) 10%, var(--elev));
+}
+.toast--danger {
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+  background: var(--danger-soft);
+  color: var(--danger);   /* 失败才用重色；成功态文案保持 --text（不喧哗） */
+}
+
+.toast--ok .toast__icon,
+.toast--danger .toast__icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: var(--sp-5); height: var(--sp-5); flex: none;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-xs); font-weight: var(--fw-black); line-height: 1;
+}
+/* 徽标取色照抄 .avatar 的做法：底色淡、字色是"语气色压深到 --text"，
+   两种主题极性（亮/暗）下对比度都够（暗档的 --ok/--danger 本身是亮色）。 */
+.toast--ok .toast__icon {
+  background: color-mix(in srgb, var(--ok) 18%, var(--elev));
+  color: color-mix(in srgb, var(--ok) 62%, var(--text));
+}
+.toast--ok .toast__icon::before { content: "✓"; }
+
+.toast--danger .toast__icon {
+  background: color-mix(in srgb, var(--danger) 18%, var(--elev));
+  color: color-mix(in srgb, var(--danger) 62%, var(--text));
+}
+.toast--danger .toast__icon::before { content: "!"; }
 
 /* --------------------------------------------------------------------------
    11) 【补】下拉菜单  .menu

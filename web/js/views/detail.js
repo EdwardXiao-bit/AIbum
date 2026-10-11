@@ -41,6 +41,7 @@ import * as router from '../router.js';
 import * as store from '../store.js';
 import { h } from '../components/dom.js';
 import { createSelectMenu } from '../components/select-menu.js';
+import { createSpinner } from '../components/spinner.js';
 
 /** 标签分隔符：半角逗号 + 中文逗号（行为清单 6.8 / legacy L229）。 */
 export const TAG_SPLIT = /[,，]/;
@@ -265,7 +266,14 @@ export function createDetailView(options = {}) {
     'aria-checked': 'false', 'aria-labelledby': 'detail-favorite-label',
   });
   const autoText = h('p', { className: 'detail__auto', id: 'detail-auto', 'data-role': 'auto' });
-  const stateText = h('p', { className: 'detail__state', id: 'detail-state', 'data-role': 'state' });
+  /* 状态行：spinner（装饰，aria-hidden）+ 文案位。
+     文案位是**子节点**，所以下面 `stateText.textContent = …` 的两处都改写成
+     `stateLabel.textContent = …` —— 否则会把 spinner 一起冲掉。
+     `#detail-state` 的 textContent 仍是纯文案（既有探针读的就是它）。 */
+  const stateSpinner = createSpinner({ size: 'sm' });
+  const stateLabel = h('span', { className: 'detail__state-text' });
+  const stateText = h('p', { className: 'detail__state row row--nowrap', id: 'detail-state', 'data-role': 'state' },
+    [stateSpinner.element, stateLabel]);
 
   const form = h('form', { className: 'detail__form', id: 'detail-form' }, [
     h('div', { className: 'drawer__body detail__body' }, [
@@ -361,8 +369,9 @@ export function createDetailView(options = {}) {
     tagsInput.value = (item.tags || []).map(tag => tag.name).join(', ');
     autoText.textContent = formatAutoTags(item.tags);
     favoriteSwitch.setAttribute('aria-checked', item.favorite ? 'true' : 'false');
-    stateText.textContent = formatState(item, store.statusName);
+    stateLabel.textContent = formatState(item, store.statusName);
     stateText.dataset.status = item.status;
+    stateSpinner.hide();          // 数据到了：收掉加载弧（状态文案本身在文案位里）
 
     similarButton.disabled = !buttons.similar;
     retryButton.disabled = !buttons.retry;
@@ -380,7 +389,8 @@ export function createDetailView(options = {}) {
     locationInput.value = '';
     tagsInput.value = '';
     autoText.textContent = '';
-    stateText.textContent = '正在加载…';
+    stateLabel.textContent = '正在加载…';
+    stateSpinner.show();          // 抽屉先出现、数据后到：这里给一个看得见的等待指示
     favoriteSwitch.setAttribute('aria-checked', 'false');
     similarButton.disabled = true;
     retryButton.disabled = true;
@@ -490,7 +500,7 @@ export function createDetailView(options = {}) {
       currentId = null;
       photo = null;
       routeAway({ id: photoId });
-      store.toast(error && error.message ? error.message : String(error));
+      store.toastFail(error);
       return null;
     }
   }
@@ -571,7 +581,7 @@ export function createDetailView(options = {}) {
     close();
     routeAway({ id: current.id });
     await onSaved();
-    store.toast('修改已保存');
+    store.toastOk('修改已保存');
   }));
 
   /* 6.9 重新分析 */
@@ -582,7 +592,7 @@ export function createDetailView(options = {}) {
     close();
     routeAway({ id: current.id });
     await onRetried();
-    store.toast('已加入分析队列');
+    store.toastOk('已加入分析队列');
   }));
 
   /* 6.10 找相似（从详情发起，发起后关闭详情） */

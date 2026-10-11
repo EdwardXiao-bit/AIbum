@@ -264,7 +264,7 @@ try {
   bootResult = await main.boot();     // 0.8 启动流程：/auth/me → 工作区 / 登录态
 } catch (error) {
   bootError = error;
-  store.toast(error && error.message ? error.message : String(error));
+  store.toastFail(error);
 }
 
 // 验收钩子（阶段 1 的 next.html 用的是同一套命名）。正式视图不依赖它。

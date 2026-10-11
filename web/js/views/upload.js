@@ -179,7 +179,9 @@ export function createUploadDialog(options) {
  * 建一个上传器。
  * @param {{
  *   queue?: object,                 // 队列视图（components/upload-queue.js）——事件接收器
- *   onNotice?: (text: string) => any,   // 完成通知（默认走 store.toast）
+ *   onNotice?: (text: string, tone: 'ok'|'danger') => any,   // 完成通知（默认走 store.toast）
+ *                                   // tone：本批**有错误明细**就是失败语气，否则成功语气
+ *                                   // （落实卡「轻量两项」②：完成通知过去与报错长得一模一样）
  *   onProgress?: (info: object) => any, // 总体进度（附带的观察点，验收探针用）
  *   onStart?: () => any,            // 批次开始（视图用来展开队列面板）
  *   onSettled?: (info: object) => any,  // 批次结束（视图用来刷新列表 / 收起忙碌态）
@@ -191,7 +193,7 @@ export function createUploadDialog(options) {
  */
 export function createUploader(options = {}) {
   const queue = options.queue || null;
-  const onNotice = options.onNotice || (text => store.toast(text));
+  const onNotice = options.onNotice || ((text, tone) => store.toast(text, { tone }));
   const beforeSend = options.beforeSend || null;
   /** 4.5 的账户来源。做成可注入是因为单测要"在传输途中换账户"，而 store 是只读模块。 */
   const getUser = options.getUser || (() => store.getState().user);
@@ -232,6 +234,8 @@ export function createUploader(options = {}) {
     noticeText: '',
     /** 最近一次完成通知的时间戳（0 = 还没通知过）。 */
     noticeAt: 0,
+    /** 最近一次完成通知的**语气**（'ok' / 'danger'；空 = 还没通知过）。 */
+    noticeTone: '',
     /** 结束时账户是否还是发起者（false = 4.5 生效）。 */
     ownerIntact: true,
     /** 有没有因为账户切换而中止。 */
@@ -251,6 +255,7 @@ export function createUploader(options = {}) {
     telemetry.lastProgress = null;
     telemetry.noticeText = '';
     telemetry.noticeAt = 0;
+    telemetry.noticeTone = '';
     telemetry.ownerIntact = true;
     telemetry.stoppedEarly = false;
   }
@@ -441,7 +446,10 @@ export function createUploader(options = {}) {
     });
     telemetry.noticeText = notice;
     telemetry.noticeAt = Date.now();
-    onNotice(notice);
+    /* 语气：有错误明细 → 失败（红 + !）；干净完成 → 成功（绿 + ✓）。
+       这里只按"有没有错误"判，别的信号（重复张数、跳过数）都是正常结果，不是失败。 */
+    telemetry.noticeTone = telemetry.errors.length ? 'danger' : 'ok';
+    onNotice(notice, telemetry.noticeTone);
     if (options.onSettled) options.onSettled({ notice, stoppedEarly, ownerIntact: true });
     return { notice, ownerIntact: true };
   }

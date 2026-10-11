@@ -124,7 +124,7 @@ export async function bootAuthCheck() {
     store.resetToLogin();
     // 未登录（401）是启动时的正常分支，不打扰；其它错误（网络/500）要看得见。
     const expected = error instanceof ApiError && (error.status === 401 || error.status === 403);
-    if (!expected) store.toast(error && error.message ? error.message : String(error));
+    if (!expected) store.toastFail(error);
     return null;
   }
 }

@@ -42,6 +42,7 @@ import { api } from '../api.js';
 import * as store from '../store.js';
 import { h, setText } from '../components/dom.js';
 import { createSelectMenu } from '../components/select-menu.js';
+import { createSpinner } from '../components/spinner.js';
 
 /* --------------------------------------------------------------------------
    1) 文案与常量（逐字对齐 legacy/index.html L43-47 与 legacy/app.js L265-292）
@@ -246,10 +247,14 @@ export function createAdminView(options = {}) {
     document: options.document || document,
   });
 
+  /* 刷新按钮：文字与加载弧都是子节点（setText 写 textContent 会冲掉 spinner）。
+     这一处正好是"**不要与已有的 aria-busy 重复标注**"的例子：按钮本来就在
+     renderBusy() 里设 aria-busy（语义），spinner 只是它的视觉表现（aria-hidden）。 */
+  const refreshSpinner = createSpinner({ size: 'sm' });
   const refreshButton = h('button', {
     className: 'btn', id: 'admin-refresh', type: 'button',
-    'data-role': 'admin-refresh', text: ADMIN_COPY.refresh,
-  });
+    'data-role': 'admin-refresh',
+  }, [refreshSpinner.element, h('span', { className: 'btn__label', text: ADMIN_COPY.refresh })]);
   /* ---------------- 8.6 用户表 ---------------- */
 
   const tbody = h('tbody', { id: 'admin-users', 'data-role': 'admin-users' });
@@ -343,6 +348,7 @@ export function createAdminView(options = {}) {
     refreshButton.disabled = loading;
     refreshButton.setAttribute('aria-busy', loading ? 'true' : 'false');
     table.setAttribute('aria-busy', loading ? 'true' : 'false');
+    if (loading) refreshSpinner.show(); else refreshSpinner.hide();
   }
 
   /** 8.5：把 overview 写进统计卡片与两行服务信息。 */
@@ -469,7 +475,7 @@ export function createAdminView(options = {}) {
       if (token !== loadToken) return;
       if (error && error.stale) return;           // 0.4：账户切换导致在途请求作废，静默丢弃
       lastError = error && error.message ? error.message : String(error);
-      store.toast(lastError);
+      store.toastFail(lastError);
       render();
     } finally {
       if (token === loadToken) {

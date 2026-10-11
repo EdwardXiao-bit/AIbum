@@ -161,19 +161,18 @@
   outline-offset: var(--ring-offset);
 }
 
+/* 模型冷加载提示：等待指示改用设计系统的 `.spinner`
+   （落实卡「轻量两项」③；审计原话："模型加载是自造脉动圆点"）。
+   这里原来有一条 `::before` 自造圆点 + `animation: pulse`，现已删除 ——
+   它的替代者是 js 里 createSpinner() 生成的 `<span class="spinner spinner--sm" aria-hidden="true">`
+   （装饰性指示器必须 aria-hidden，见 components/spinner.js 的契约）。
+   布局不用改：本类本来就是 inline-flex + gap，正好装"指示器 + 文案"两个子节点。 */
 .library__model-hint {
   font-size: var(--fs-ctl);
   color: var(--warn);
   display: inline-flex;
   align-items: center;
   gap: var(--sp-2);
-}
-.library__model-hint::before {
-  content: "";
-  width: var(--sp-2); height: var(--sp-2);
-  border-radius: var(--r-pill);
-  background: currentColor;
-  animation: pulse 1.4s ease-in-out infinite;
 }
 
 /* --------------------------------------------------------------------------

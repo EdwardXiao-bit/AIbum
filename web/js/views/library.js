@@ -71,6 +71,7 @@ import * as router from '../router.js';
 import * as store from '../store.js';
 import { h, setText } from '../components/dom.js';
 import { createSelectMenu } from '../components/select-menu.js';
+import { createSpinner, createLoader } from '../components/spinner.js';
 import { createPhotoCard } from '../components/photo-card.js';
 import { createUploadQueue } from '../components/upload-queue.js';
 import { createUploadDialog, createUploader } from './upload.js';
@@ -197,9 +198,14 @@ export function createLibraryView(options = {}) {
     'data-role': 'drop-zone',
   }, [dropPrompt, referenceInfo, referenceInput]);
 
+  /* 检索按钮：文字与加载弧**都是子节点**。
+     为什么不能直接 setText(searchButton, …)：setText 写的是 textContent，会把 spinner
+     一起冲掉（这条对下面几处同理）。`.btn` 自带 inline-flex + gap，不用新样式。 */
+  const searchSpinner = createSpinner({ size: 'sm' });
+  const searchLabel = h('span', { className: 'btn__label', text: '搜索' });
   const searchButton = h('button', {
-    className: 'btn btn--primary btn--lg library__submit', id: 'search-button', type: 'submit', text: '搜索',
-  });
+    className: 'btn btn--primary btn--lg library__submit', id: 'search-button', type: 'submit',
+  }, [searchSpinner.element, searchLabel]);
   const resetButton = h('button', {
     className: 'btn btn--lg btn--ghost', id: 'reset-search', type: 'button', text: '重置',
   });
@@ -220,7 +226,15 @@ export function createLibraryView(options = {}) {
     return label;
   });
 
-  const modelHint = h('p', { className: 'library__model-hint', id: 'model-hint', role: 'status', hidden: true, 'data-role': 'model-hint' });
+  /* 模型冷加载提示（检索超 2 秒才出现，实测首次约 54 秒）。
+     原来这里用 `.library__model-hint::before` 自造了一个脉动圆点 —— 就是审计里那句
+     "模型加载是自造脉动圆点"。现在改用设计系统的 `.spinner`（装饰性 → aria-hidden），
+     自造伪元素已从 library.css 删除。文字与指示器分开，setText 只动文字位。 */
+  const modelHintSpinner = createSpinner({ size: 'sm' });
+  const modelHintLabel = h('span', { className: 'library__model-hint-text' });
+  const modelHint = h('p', {
+    className: 'library__model-hint', id: 'model-hint', role: 'status', hidden: true, 'data-role': 'model-hint',
+  }, [modelHintSpinner.element, modelHintLabel]);
 
   const hero = h('section', { className: 'library__hero' }, [
     h('p', { className: 'eyebrow', text: 'PERSONAL LIBRARY' }),
@@ -366,12 +380,15 @@ export function createLibraryView(options = {}) {
     h('span', { className: 'empty__icon', 'aria-hidden': 'true', text: '🖼' }),
     emptyTitle, emptyDesc,
   ]);
+  /* 加载更多的等待指示：设计系统 §13 的三点行（原文用途就是"正在加载更多"）。
+     与按钮做**替换**而不是并排：点下去那一刻按钮收起、三点行顶上，肉眼能看出"在动了"。 */
+  const loadMoreLoader = createLoader({ text: '正在加载更多…' });
   const loadMore = h('button', { className: 'btn loadmore', id: 'load-more', type: 'button', hidden: true, 'data-role': 'load-more', text: '加载更多' });
 
   const results = h('section', { className: 'library__results' }, [
     h('div', { className: 'library__results-head' }, [resultLabel, searchSummary]),
     batchBar, grid, emptyNode,
-    h('div', { className: 'library__tail' }, [loadMore]),
+    h('div', { className: 'library__tail' }, [loadMore, loadMoreLoader.element]),
   ]);
 
   /* ---------------- 上传：投递区 + 队列（第 4 节；新增全页拖放） ---------------- */
@@ -406,7 +423,7 @@ export function createLibraryView(options = {}) {
    */
   const uploadQueue = createUploadQueue({
     document: document_,
-    onRetry: id => { uploader.retry(id).catch(error => store.toast(error && error.message ? error.message : String(error))); },
+    onRetry: id => { uploader.retry(id).catch(error => store.toastFail(error)); },
     onRemove: id => {
       if (store.isUploading()) return;
       uploader.remove(id);
@@ -972,20 +989,26 @@ export function createLibraryView(options = {}) {
 
   function setSearchBusy(busy) {
     searchButton.disabled = busy;
-    setText(searchButton, busy ? '检索中…' : '搜索');
+    /* aria-busy 挂在**按钮**上（语义），spinner 只是装饰（aria-hidden，见 spinner.js 的契约）。
+       两处各标一次"忙碌"会让读屏念两遍 —— 所以绝不在 spinner 上再挂 aria-busy。 */
+    searchButton.setAttribute('aria-busy', busy ? 'true' : 'false');
+    if (busy) searchSpinner.show(); else searchSpinner.hide();
+    setText(searchLabel, busy ? '检索中…' : '搜索');
     root.dataset.searching = busy ? 'true' : 'false';
     // 检索中不自动重载列表（Q4 的"不打扰"条件之一）
     if (busy) lastAutoReloadAt = Date.now();
   }
 
   function showModelHint(text) {
-    setText(modelHint, text);
+    setText(modelHintLabel, text);
+    modelHintSpinner.show();
     modelHint.hidden = false;
   }
 
   function clearModelHint() {
     if (hintTimer) clearTimeout(hintTimer);
     hintTimer = null;
+    modelHintSpinner.hide();
     modelHint.hidden = true;
   }
 
@@ -1084,9 +1107,9 @@ export function createLibraryView(options = {}) {
         store.toggleSelected(id, false);
         done += 1;
       }
-      store.toast(`已处理 ${done} 张照片`);
+      store.toastOk(`已处理 ${done} 张照片`);
     } catch (error) {
-      store.toast(`已处理 ${done} 张；${error && error.message ? error.message : String(error)}`);
+      store.toastFail(`已处理 ${done} 张；${error && error.message ? error.message : String(error)}`);
     } finally {
       store.setBusy(false);
       await refreshOptions();
@@ -1163,6 +1186,7 @@ export function createLibraryView(options = {}) {
     if (!all.length) return [];
     const images = all.filter(file => !file.type || /^image\//i.test(file.type));
     if (images.length !== all.length) {
+      // **中性**语气（不带变体）：这是一句信息性说明，不是失败——图片本身照常进队列。
       store.toast(`已忽略 ${all.length - images.length} 个非图片文件`);
     }
     return allowMultiple ? images : images.slice(0, 1);
@@ -1270,7 +1294,7 @@ export function createLibraryView(options = {}) {
     try {
       await runSearch();
     } catch (error) {
-      store.toast(error && error.message ? error.message : String(error));
+      store.toastFail(error);
     }
   });
 
@@ -1278,6 +1302,7 @@ export function createLibraryView(options = {}) {
   searchInput.addEventListener('input', () => {
     if (searchInput.value && referenceFile) {
       clearReference();
+      // 中性：这是应用替用户做的一次自动纠正（不是失败，也不需要庆祝）
       store.toast('已改用文字搜索，参考图已移除');
     }
   });
@@ -1377,10 +1402,20 @@ export function createLibraryView(options = {}) {
   /** 2.8 加载更多 */
   loadMore.addEventListener('click', store.guard(async () => {
     loadMore.disabled = true;
+    loadMore.setAttribute('aria-busy', 'true');
+    loadMore.hidden = true;                 // 与三点行做替换（见上面的 loadMoreLoader）
+    loadMoreLoader.show();
     try {
       await fetchBrowse({ append: true });
     } finally {
+      loadMoreLoader.hide();
+      loadMore.removeAttribute('aria-busy');
       loadMore.disabled = false;
+      /* 恢复按钮可见性交给**渲染**（renderResultsBar 按"还有没有下一张"决定），
+         这里只处理"这一帧要不要收起来"：结果已经回来了，按钮该由它自己出现。
+         注意顺序：fetchBrowse 内部已 emit 过 results，renderResultsBar 已经把
+         hidden 设成了正确值；这一行只是把上面那次"收起"抵消掉。 */
+      renderResultsBar();
     }
   }));
 
@@ -1488,7 +1523,7 @@ export function createLibraryView(options = {}) {
     await api.post('/albums', { name: name.slice(0, 80) });
     if (modals) modals.close(dialog);
     await refreshOptions();
-    store.toast('相册已创建');
+    store.toastOk('相册已创建');
   }));
 
   /** 上传入口（第 4 节）：点击投递区 / 键盘 Enter 空格 / 隐藏 input 都落到同一处 */
@@ -1555,7 +1590,8 @@ export function createLibraryView(options = {}) {
     setDragOverlay(false);
     uploadZone.dataset.drag = 'false';
     if (uploadBusy()) {
-      store.toast('上一批还在上传，请等它结束再拖入新的照片');
+      // 失败语气：用户这个动作**没有被执行**（不是一句无关痛痒的提示）
+      store.toastFail('上一批还在上传，请等它结束再拖入新的照片');
       return;
     }
     onUpload(event.dataTransfer.files);
@@ -1619,7 +1655,7 @@ export function createLibraryView(options = {}) {
         try {
           await refreshAll();
         } catch (error) {
-          store.toast(error && error.message ? error.message : String(error));
+          store.toastFail(error);
         }
       })();
       if (pollTimer === null) {

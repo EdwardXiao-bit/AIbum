@@ -92,10 +92,13 @@
 
   <main class="app-main">
     <div class="container" id="view-root">
-      <!-- 首屏占位：/api/auth/me 返回前不闪错误的一屏（boot 完就被视图替换） -->
+      <!-- 首屏占位：/api/auth/me 返回前不闪错误的一屏（boot 完就被视图替换）。
+           加载弧是**装饰性**的（aria-hidden，落实卡「轻量两项」③）：这里的等待语义由
+           文字"正在检查登录状态…"表达，不需要再给容器加 aria-busy 标第二遍。
+           `.row.row--nowrap` 是 base.css 既有的横向工具类（inline-flex + 居中 + 间距）。 -->
       <section class="placeholder" id="boot-hint">
         <p class="eyebrow">AIbum</p>
-        <p class="lead">正在检查登录状态…</p>
+        <p class="lead row row--nowrap"><span class="spinner spinner--sm" aria-hidden="true"></span>正在检查登录状态…</p>
       </section>
     </div>
   </main>

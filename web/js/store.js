@@ -108,8 +108,8 @@ const state = {
       为什么是计数而不是布尔：队列本身可能嵌套发起（自动串行 + 用户点"重试"），
       布尔会被先结束的那一层提前清掉。isUploading() 对外只暴露布尔。 */
   uploading: 0,
-  /** 顶部提示条：{text, visible, at}。 */
-  toast: { text: '', visible: false, at: 0 },
+  /** 顶部提示条：{text, visible, at, tone}。tone 见 TOAST_TONES（'' = 信息性）。 */
+  toast: { text: '', visible: false, at: 0, tone: '' },
   /** 最近若干条通知的流水（只读用途：验收脚本要确定"这条报错是谁报的"，
       光看 DOM 只能拿到最后一条，会被后续通知覆盖）。 */
   toastLog: [],
@@ -164,14 +164,27 @@ export function emit(reason = 'update', detail) {
 
 let toastTimer = null;
 
+/** 提示条的语气（落实卡「轻量两项」②）：'' = 信息性（中性，无装饰）/ 'ok' / 'danger'。 */
+const TOAST_TONES = ['ok', 'danger'];
+
+/** 从任意抛出物里取可显示文案（0.2 的错误提取在 api.js 做过一次；这里兜住非 ApiError / 字符串）。 */
+function toastTextOf(value) {
+  return value && value.message ? value.message : String(value);
+}
+
 /**
  * 顶部提示条。同一条消息重复触发也会重置计时（先 clearTimeout）。
+ *
+ * 语气默认是**中性**（不带任何变体）：通知条有三种语气，成功与失败各自显式标注，
+ * 没标注的就是信息性提示（例："已忽略 3 个非图片文件"）。中性态与升级前**逐像素一致**。
+ *
  * @param {string} text
- * @param {{timeout?: number}} [options] 仅测试用，可覆盖 7 秒
+ * @param {{ tone?: 'ok'|'danger'|'', timeout?: number }} [options] timeout 仅测试用，可覆盖 7 秒
  */
 export function toast(text, options = {}) {
   const timeout = Number.isFinite(options.timeout) ? options.timeout : NOTIFY_MS;
-  state.toast = { text: String(text ?? ''), visible: true, at: Date.now() };
+  const tone = TOAST_TONES.includes(options.tone) ? options.tone : '';
+  state.toast = { text: String(text ?? ''), visible: true, at: Date.now(), tone };
   state.toastLog.push(state.toast.text);
   if (state.toastLog.length > 50) state.toastLog.shift();
   if (toastTimer !== null) clearTimeout(toastTimer);
@@ -182,6 +195,22 @@ export function toast(text, options = {}) {
   }, timeout);
   emit('toast', state.toast);
   return state.toast;
+}
+
+/**
+ * 成功语气（绿底 + ✓ 徽标）。用于"这个动作做成了"的确切回执：
+ * 相册已创建 / 修改已保存 / 密码已修改 / 上传完成 / 批量处理完成……
+ */
+export function toastOk(text) {
+  return toast(text, { tone: 'ok' });
+}
+
+/**
+ * 失败语气（红底 + ! 徽标 + 红字）。**失败态不只靠颜色**：字形与底色都不同。
+ * 可直接把 Error 或字符串交给它（统一取 message，与 0.2 的错误提取一致）。
+ */
+export function toastFail(error) {
+  return toast(toastTextOf(error), { tone: 'danger' });
 }
 
 /** 立即收起提示条（视图的"关闭"按钮用）。 */
@@ -197,6 +226,7 @@ export const notice = toast;
 
 /**
  * 统一异常包装（0.7）：所有事件处理器包一层，异常转成通知条，不静默。
+ * 异常一律是失败语气（这里是应用里最大的一个 catch-all）。
  * @param {(...args) => any} handler
  */
 export function guard(handler) {
@@ -204,7 +234,7 @@ export function guard(handler) {
     try {
       return await handler(...args);
     } catch (error) {
-      toast(error && error.message ? error.message : String(error));
+      toastFail(error);
       return undefined;
     }
   };
@@ -573,7 +603,7 @@ export function __resetForTests() {
   state.health = null;
   state.users = [];
   state.busy = false;
-  state.toast = { text: '', visible: false, at: 0 };
+  state.toast = { text: '', visible: false, at: 0, tone: '' };
   state.toastLog = [];
   emit('reset');
 }

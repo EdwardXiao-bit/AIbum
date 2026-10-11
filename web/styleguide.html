@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AIbum · 设计系统自查页</title>
+<!-- 图标：与 app.html 同一条（不带它浏览器会去要 /favicon.ico → 控制台一条 404）。
+     自查页原来漏了这一行，实测控制台确实报 404；顺手补齐。 -->
+<link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
 <!-- 防 FOUC：必须在 <head> 里、样式表之前，且必须是**外部同步脚本**
      （不要 defer / async / type=module）。原因见 web/js/theme-boot.js 顶部注释与
      docs/前端-行为清单.md E1/E2：app/main.py:180 的 CSP 没有 unsafe-inline，
@@ -512,9 +515,13 @@
     </div>
     <div class="demo">
       <span class="demo__label">提示条</span>
-      <div class="toast toast--ok"><span class="badge badge--ok"><span class="badge__dot"></span></span>已收藏 2 张照片</div>
-      <div class="toast toast--danger"><span class="badge badge--danger">!</span>上传失败：单张不得超过 20 MiB</div>
-      <div class="toast" aria-busy="true"><span class="spinner"></span>正在上传 3/8…</div>
+      <!-- 三种语气：默认（信息性，无装饰）/ `--ok`（✓）/ `--danger`（!）。
+           图标位是 `.toast__icon`（空 span，字形由 components.css §10 的 ::before 画）——
+           正因为字形走 CSS，它才**不占** `#toast.textContent`（既有验收基线对 textContent 做全等比较）。
+           加载中的那条按加载指示的契约写：`aria-busy` 标在宿主（提示条）上，spinner 自己 aria-hidden。 -->
+      <div class="toast toast--ok"><span class="toast__icon" aria-hidden="true"></span>已收藏 2 张照片</div>
+      <div class="toast toast--danger"><span class="toast__icon" aria-hidden="true"></span>上传失败：单张不得超过 20 MiB</div>
+      <div class="toast" aria-busy="true"><span class="spinner spinner--sm" aria-hidden="true"></span>正在上传 3/8…</div>
     </div>
     <hr class="divider">
     <p class="note">分隔线用 <code>.divider</code>。</p>

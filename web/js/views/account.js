@@ -160,7 +160,7 @@ export function createAccountOverlays(options) {
     passwordForm.reset();
     store.resetToLogin();          // 1.6：改密后所有会话失效 → 切回登录态
     modals.close(security);
-    store.toast('密码已修改，请重新登录');
+    store.toastOk('密码已修改，请重新登录');
   }));
 
   $('rotate-code').addEventListener('click', store.guard(async () => {
@@ -195,7 +195,7 @@ export function createAccountOverlays(options) {
     forgotForm.reset();
     modals.close(forgot);
     showRecovery(result.recovery_code);      // 1.8：必须展示**新的**恢复码
-    store.toast('密码已重置，请保存新恢复码，然后登录');
+    store.toastOk('密码已重置，请保存新恢复码，然后登录');
   }));
 
   return {

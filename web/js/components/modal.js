@@ -74,6 +74,13 @@ export function createModals(options) {
 
   /**
    * 登记一个对话框：接上遮罩点击、[data-close] 按钮、Esc、Tab 循环。
+   *
+   * **open() 不会替你登记**——`[data-close]` 的点击监听只在这里挂。
+   * 只 open 不 register 的对话框，里面的 ✕ / 取消 点了不会有任何反应
+   * （比"关不掉"更糟的是看起来像页面卡死：遮罩一直盖着）。
+   * 实测踩过：views/account.js 的 security / forgot 漏了这一步。
+   * 所以：**每个会被 open 的对话框，都必须先 register 一次。**
+   *
    * @param {HTMLElement} dialog
    * @param {{onClose?: () => void, closeOnScrim?: boolean}} [opts]
    */

@@ -102,6 +102,16 @@ export function createAccountOverlays(options) {
     return security;
   }
 
+  // 必须 register（不能只 open）：✕ / 取消 的点击监听是在 register 里挂的。
+  // 少这一句的表现是"点 ✕ 和 取消 完全没反应，只能靠 Esc 或点遮罩关"——
+  // 遮罩一直盖住整页，看起来像页面卡死。
+  modals.register(security, {
+    // 关掉就清空：openSecurity 里那次 reset 是"开时清"，这里是"关时清"。
+    // 不管走哪条关闭路径（✕ / 取消 / Esc / 点遮罩），密码都不该留在 DOM 里，
+    // 下次打开也不残留上次输入的一半。
+    onClose: () => { passwordForm.reset(); },
+  });
+
   passwordForm.addEventListener('submit', store.guard(async event => {
     event.preventDefault();
     if (!newPassword.value) throw new Error('请输入新密码');
@@ -130,6 +140,12 @@ export function createAccountOverlays(options) {
     modals.open(forgot);
     return forgot;
   }
+
+  // 同上：漏了 register，这个对话框的 ✕ / 取消 就是死的。
+  modals.register(forgot, {
+    // 关掉就清空：表单里有恢复码，跟 #dialog-recovery 一样不该留在 DOM 里。
+    onClose: () => { forgotForm.reset(); },
+  });
 
   forgotForm.addEventListener('submit', store.guard(async event => {
     event.preventDefault();

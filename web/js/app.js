@@ -53,6 +53,8 @@ const nodes = {
   securityButton: must('security-button'),
   adminButton: must('admin-button'),
   logout: must('logout'),
+  topbarUpload: must('topbar-upload'),
+  topbarMenu: must('topbar-menu-toggle'),
   viewRoot: must('view-root'),
   scrim: must('scrim'),
   toast: must('toast'),
@@ -123,8 +125,14 @@ function renderTopbar(state) {
   const loggedIn = Boolean(state.user);
   nodes.account.hidden = !loggedIn;
   nodes.portalLink.hidden = loggedIn;
+  // 窄屏收纳（阶段 3.6）：菜单按钮只在登录后出现；上传常驻按钮只在"相册主界面 /
+  // 照片详情"这两个真正有上传语义的视图里出现（管理后台、登录页没有上传入口）。
+  // 宽屏下两者都被 mobile.css 的 display:none 藏起来，不影响桌面顶栏。
+  nodes.topbarMenu.hidden = !loggedIn;
+  nodes.topbarUpload.hidden = !(loggedIn && (state.view === 'library' || state.view === 'photo'));
   if (!loggedIn) {
     nodes.adminButton.hidden = true;
+    setMenuOpen(false);
     return;
   }
   nodes.username.textContent = state.user.username;
@@ -133,6 +141,39 @@ function renderTopbar(state) {
   nodes.adminButton.hidden = state.portal === 'admin' || !state.user.is_admin;
   nodes.libraryLink.hidden = state.portal !== 'admin';
 }
+
+/**
+ * 窄屏顶栏菜单（阶段 3.6）。
+ * 为什么用 data-open 切 #account 而不是另建一份菜单 DOM：次级入口（我的相册 /
+ * 账户安全 / 管理后台 / 退出）的**处理器与禁用逻辑都已经挂在现有节点上**
+ * （见下面的顶栏交互与 renderUploadLock），复制一份 DOM 就等于复制这些规则，
+ * 迟早漂移。这里只换摆法：宽屏横排，窄屏竖排下拉。
+ */
+function setMenuOpen(open) {
+  nodes.account.dataset.open = open ? 'true' : 'false';
+  nodes.topbarMenu.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+function menuIsOpen() {
+  return nodes.account.dataset.open === 'true';
+}
+
+nodes.topbarMenu.addEventListener('click', () => setMenuOpen(!menuIsOpen()));
+
+// 点面板外面 / 点面板里的任一入口 → 收起。Esc 也收起并把焦点还给菜单按钮。
+document.addEventListener('click', event => {
+  if (!menuIsOpen()) return;
+  if (nodes.account.contains(event.target) || nodes.topbarMenu.contains(event.target)) return;
+  setMenuOpen(false);
+});
+document.addEventListener('keydown', event => {
+  if (event.key !== 'Escape' || !menuIsOpen()) return;
+  setMenuOpen(false);
+  nodes.topbarMenu.focus();
+});
+// 视口变宽 → 面板形态不存在了，收起（否则转屏回窄屏时它会莫名其妙地开着）
+const wideQuery = window.matchMedia('(min-width: 900px)');
+wideQuery.addEventListener('change', event => { if (event.matches) setMenuOpen(false); });
 
 /**
  * 4.8 上传期间锁定：**登出**与**账户安全**在上传进行中必须禁用。
@@ -147,6 +188,9 @@ function renderUploadLock(state) {
   nodes.securityButton.disabled = busy;
   nodes.logout.setAttribute('aria-disabled', busy ? 'true' : 'false');
   nodes.securityButton.setAttribute('aria-disabled', busy ? 'true' : 'false');
+  // 窄屏的常驻上传按钮与设计系统的上传区是同一个动作（4.8：上传期间锁定）
+  nodes.topbarUpload.disabled = busy;
+  nodes.topbarUpload.setAttribute('aria-disabled', busy ? 'true' : 'false');
   if (busy) modals.close(overlays.elements.security);   // 上传中不许改密码：开着的安全面板直接收起
 }
 
@@ -182,13 +226,33 @@ function render(state, reason) {
 
 /** 1.5 登出：请求成功即切回登录态（清空交给 store.resetToLogin）。 */
 nodes.logout.addEventListener('click', store.guard(async () => {
+  setMenuOpen(false);
   await api.post('/auth/logout');
   store.resetToLogin();
 }));
 
-nodes.securityButton.addEventListener('click', () => overlays.openSecurity());
+nodes.securityButton.addEventListener('click', () => {
+  setMenuOpen(false);
+  overlays.openSecurity();
+});
 
-nodes.adminButton.addEventListener('click', () => router.navigate('#/admin'));
+nodes.adminButton.addEventListener('click', () => {
+  setMenuOpen(false);
+  router.navigate('#/admin');
+});
+
+// 窄屏菜单里的"我的相册"是个 <a href="#/library">：点它就走路由，顺手收起面板
+nodes.libraryLink.addEventListener('click', () => setMenuOpen(false));
+
+/**
+ * 窄屏顶栏的上传按钮（阶段 3.6）：与相册主界面里的「选择照片…」是**同一个动作**，
+ * 复用主界面暴露的入口，不另开一条上传路径（4.1 的 XHR / 4.2 的串行 / 4.5 的
+ * 账户切换中断都只有一份实现）。
+ */
+nodes.topbarUpload.addEventListener('click', () => {
+  if (typeof libraryView.pickUploadFiles !== 'function') return;
+  libraryView.pickUploadFiles();
+});
 
 /* --------------------------------------------------------------------------
    启动

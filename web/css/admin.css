@@ -183,4 +183,21 @@
   .admin__toolbar .select { width: 100%; }
   .admin__confirm-text + .dialog__foot { flex-direction: column-reverse; }
   .admin__confirm-text + .dialog__foot .btn { width: 100%; }
+
+  /* -- 操作列吸右边（阶段 3.6 / F8 补）--
+     这段是 F8 加的，**覆盖**上面 §3 里"让表格整体横向滚动"的那个取舍的一半：
+     表格仍然横向滚动（5 列不该被挤成一列文字，这条 F7 的判断是对的），
+     但「操作」列吸在右边常驻 —— 因为它是窄屏这一屏**唯一要做的事**，
+     不吸住的话整列都在屏幕外（390 宽实测 left=537 / right=588，视口只有 390），
+     必须先横向滑到底才点得到"停用"，而页面上没有任何提示"表还能往右滑"。
+     吸住需要自己的不透明底（否则横向滚动时下面的单元格会透出来）。 */
+  .admin__table th:last-child,
+  .admin__table td:last-child {
+    position: sticky;
+    right: 0;
+    z-index: 1;
+    background: var(--elev);
+    box-shadow: inset var(--bw) 0 0 var(--line);
+  }
+  .admin__table tbody tr:hover td:last-child { background: var(--sunken); }
 }

@@ -19,7 +19,9 @@
        相对路径在 /admin 下会解析错位置。
        library.css 是阶段 3.2（相册主界面）的视图样式，全部选择器都挂在 .library 下。
        detail.css 是阶段 3.3（照片详情·右侧抽屉）的视图样式，全部选择器都挂在 .detail 下。
-       admin.css 是阶段 3.5（管理后台）的视图样式，全部选择器都挂在 .admin 下。 -->
+       admin.css 是阶段 3.5（管理后台）的视图样式，全部选择器都挂在 .admin 下。
+       mobile.css 是阶段 3.6（窄屏适配）的**跨视图覆盖层**，必须最后加载：
+       它只覆盖设计系统为桌面定的密度（触控目标 / 顶栏收纳 / 窄屏留白）。 -->
   <link rel="stylesheet" href="/static/css/tokens.css">
   <link rel="stylesheet" href="/static/css/base.css">
   <link rel="stylesheet" href="/static/css/components.css">
@@ -27,11 +29,18 @@
   <link rel="stylesheet" href="/static/css/library.css">
   <link rel="stylesheet" href="/static/css/detail.css">
   <link rel="stylesheet" href="/static/css/admin.css">
+  <link rel="stylesheet" href="/static/css/mobile.css">
 </head>
 <body>
   <header class="topbar">
     <a class="topbar__brand" id="brand" href="#/library">AIbum<small>智慧相册</small></a>
     <a class="topbar__portal" id="portal-link" href="/admin">管理员入口</a>
+    <!-- 窄屏收纳（阶段 3.6）：上传常驻可见；次级入口（用户名 / 我的相册 / 账户安全 /
+         管理后台 / 退出）由 #topbar-menu-toggle 收进 #account 这个下拉面板。
+         宽屏下这两个按钮被 mobile.css 隐藏（display:none），顶栏的形态与 F1–F7 一致。 -->
+    <button class="btn btn--sm topbar__upload" id="topbar-upload" type="button" hidden>上传照片</button>
+    <button class="btn btn--icon btn--ghost topbar__menu-toggle" id="topbar-menu-toggle" type="button"
+            aria-expanded="false" aria-controls="account" aria-label="更多入口" hidden>☰</button>
     <div class="topbar__account" id="account" hidden>
       <span class="topbar__user" id="username"></span>
       <a class="btn btn--sm btn--ghost" id="library-link" href="#/library" hidden>我的相册</a>

@@ -1,0 +1,223 @@
+/* ==========================================================================
+   AIbum · 窄屏适配（跨视图）  web/css/mobile.css
+   --------------------------------------------------------------------------
+   阶段 3.6（F8 · 决策台账 D3：**桌面为设计基准，窄屏自适应且功能不减少**）。
+
+   为什么单独一个文件，而不是往 base/components 里塞：
+     这一层全部是"窄屏才生效的**覆盖**"（覆盖设计系统给桌面定的密度），
+     集中一处才能一眼看全"窄屏到底改了什么"。各视图自己的断点仍留在各自的
+     视图样式里（library.css §9 / detail.css §5 / admin.css §4），
+     本文件只管**跨视图**的三件事：
+
+       1) 顶栏收纳：窄屏只留「品牌 · 上传 · 菜单」，次级入口（用户名 / 我的相册 /
+          账户安全 / 管理后台 / 退出）收进下拉菜单。**上传按钮保留常驻**。
+       2) 触控目标 ≥ 44×44 CSS px：按钮 / 芯片 / 复选卡 / 开关。
+          开关与照片卡上的复选卡**视觉尺寸不变**，靠 ::before 把命中区撑到 44 —— 
+          视觉大小与可点范围是两件事，44 是手指的尺寸，不是图标的尺寸。
+       3) 窄屏密度：容器内边距、对话框高度（用 dvh 避开移动浏览器的地址栏）。
+
+   规矩（与 tokens / base / components 一致）：
+     - 只引用令牌，不写死颜色 / 圆角 / 阴影 / 间距 / 字号
+     - 不写内联 style（CSP §0A E1/E5）
+     - **字号下限 11.5px**（--fs-xs）：窄屏只许改间距与摆法，不许把字压得更小
+   ========================================================================== */
+
+:root {
+  /* 触控目标的最小边长。44 是 iOS HIG / Material 的公认下限，
+     单列一个令牌是为了让"为什么是 44"只出现一次。 */
+  --touch: 44px;
+  /* 顶栏在窄屏的高度：按钮涨到 44 后，靠内边距把它压回 61 附近，
+     免得 --topbar-h 这个给认证页竖直居中用的度量失真。 */
+  --topbar-h-narrow: 61px;
+}
+
+/* --------------------------------------------------------------------------
+   1) 顶栏收纳（窄屏）
+   --------------------------------------------------------------------------
+   DOM 结构不变，只换摆法：
+     .topbar__upload        窄屏才出现（上传是最高频动作，必须常驻可见）
+     .topbar__menu-toggle   窄屏才出现（☰）
+     .topbar__account       窄屏不再是横向一排，而是菜单按钮下的下拉面板
+   三个节点的 hidden 由 js/app.js 按登录态与当前视图设，这里只管窄屏的形态。
+   -------------------------------------------------------------------------- */
+
+.topbar__upload,
+.topbar__menu-toggle { display: none; }
+
+@media (max-width: 899px) {
+  .topbar {
+    padding: var(--sp-2) var(--sp-4);
+    gap: var(--sp-2);
+    min-height: 0;
+    height: var(--topbar-h-narrow);
+  }
+  /* 上传按钮靠右推：它是常驻项，菜单按钮贴在它右边 */
+  .topbar__upload { display: inline-flex; margin-left: auto; }
+  .topbar__menu-toggle { display: inline-flex; }
+
+  /* 菜单按钮下的下拉：复用设计系统的浮层观感（与 .menu 同款），
+     但它是**一列按钮**，所以用 flex 列而不是 .menu__item。 */
+  .topbar__account {
+    position: absolute;
+    top: calc(100% + var(--sp-2));
+    right: var(--sp-4);
+    z-index: var(--z-pop);
+    margin-left: 0;
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--sp-2);
+    min-width: min(232px, calc(100vw - var(--sp-6)));
+    padding: var(--sp-3);
+    background: var(--elev);
+    border: var(--bw) solid var(--line);
+    border-radius: var(--r);
+    box-shadow: var(--sh-2);
+    animation: pop-in var(--dur) var(--ease);
+  }
+  .topbar__account[data-open="true"] { display: flex; }
+  /* 用户名在面板里当标题行，不再挤在顶栏中间 */
+  .topbar__account .topbar__user {
+    max-width: none;
+    padding: 0 var(--sp-2) var(--sp-2);
+    border-bottom: var(--bw) solid var(--line-soft);
+  }
+  /* 面板里的入口统一成"菜单项"形态（左对齐、无边框、悬停底色）：
+     原来四个按钮各带自己的 .btn 观感（退出有边框、其余是幽灵），
+     竖排放在一起像拼错的表格。这里对齐 css/components.css 的 .menu__item。 */
+  .topbar__account .btn {
+    width: 100%;
+    justify-content: flex-start;
+    padding-inline: var(--sp-2);
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+    color: var(--text);
+    font-size: var(--fs-ctl);
+  }
+  .topbar__account .btn:hover { background: var(--sunken); color: var(--text); }
+  /* 未登录时顶栏只有品牌 + 管理员入口，入口文字收一档免得换行 */
+  .topbar__portal { font-size: var(--fs-sm); }
+  /* 顶栏里的两个文字链接也是手指目标（品牌是回主界面的入口） */
+  .topbar__brand,
+  .topbar__portal {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--touch);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   2) 触控目标 ≥ 44×44（窄屏）
+   --------------------------------------------------------------------------
+   只覆盖"设计系统为鼠标定的高度"（--ctl-h 40 / --ctl-h-sm 32 / 芯片 ~24），
+   不动字号与视觉风格。
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 899px) {
+  /* --- 按钮 --- */
+  .btn,
+  .btn--sm,
+  .btn--lg { min-height: var(--touch); }
+  .btn--icon,
+  .btn--icon.btn--sm { min-width: var(--touch); }
+
+  /* --- 芯片（标签云的标签、照片卡上的标签不算：它们不可点） --- */
+  .chip { min-height: var(--touch); padding-inline: var(--sp-4); }
+  .chip--plain { min-height: 0; }          /* 认证页的示例标签是纯文案，不是目标 */
+
+  /* --- 列表式可点项 --- */
+  .menu__item,
+  .taglist-item { min-height: var(--touch); }
+  /* 严格度三档（radio 的 label） */
+  .library__seg-item { min-height: var(--touch); }
+  .library__seg { padding: var(--mark-gap-sm); }
+  /* 分段控件与队列行内的小按钮 */
+  .seg button { min-height: var(--touch); }
+  .queue__act { min-height: var(--touch); min-width: var(--touch); }
+
+  /* --- 复选框那类"标签即目标"的控件：撑高 label 即可（label 会转发点击给 input） --- */
+  .checkbox,
+  .check { min-height: var(--touch); }
+  .checkbox input[type="checkbox"] { width: var(--check-size); height: var(--check-size); }
+
+  /* --- 开关：视觉仍是 38×22，命中区撑到 44×44 ---
+     ::before 铺一个以自身为中心的 44×44 方块。伪元素不参与 elementFromPoint 的
+     返回值，命中的元素仍是开关本身，所以"点得到"与"看起来多大"解耦。 */
+  .switch::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--touch);
+    height: var(--touch);
+    transform: translate(-50%, -50%);
+  }
+
+  /* --- 照片卡左上角的复选卡（行为清单 5.1）：同样靠 ::before 撑命中区 ---
+     两个前提，都是实测出来的：
+       ① 命中区要完整落在卡片圆角之内。复选卡距卡片角 --side-gap，44 命中区
+          的左上角落在 (--side-gap + 11 - 22) 处；12 时是 (1,1)，已经在 14px 圆角
+          的削角之外（点下去命中的是卡片本身 → 会打开照片，而不是选中），
+          16 时是 (5,5)，距圆角圆心 √50≈7.1 < 14 → 在圆角内。
+       ② 卡片是 overflow: hidden 的，超出卡片的命中区本来就点不到。 */
+  .library { --side-gap: 16px; }
+  .library .photo__sel::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--touch);
+    height: var(--touch);
+    transform: translate(-50%, -50%);
+  }
+  /* 批量条上的"全选"复用 .photo__sel，但它是 static 定位（撑不出居中的伪元素），
+     所以这里改成相对定位 + 真实 44×44。
+     **`inset: auto` 是必须的**：.photo__sel 带着 `top/left: var(--side-gap)`，
+     在 position:relative 下那不是四角内缩，而是**真的把元素位移 16px**——
+     实测全选框会偏到批量条外面去（`position:static` 时 top/left 被忽略，
+     所以这个坑只有在改成 relative 之后才出现）。 */
+  .library__select-all {
+    position: relative;
+    inset: auto;
+    width: var(--touch);
+    height: var(--touch);
+  }
+
+  /* --- 详情里的收藏开关、表单控件 --- */
+  .input,
+  .select { min-height: var(--touch); }
+}
+
+/* --------------------------------------------------------------------------
+   3) 窄屏密度
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 899px) {
+  /* 容器内边距收一档：390 宽下左右各省 8px 给内容 */
+  .topbar,
+  .app-main { padding-inline: var(--sp-4); }
+
+  /* 对话框：窄屏几乎占满宽度，高度用 dvh（移动浏览器地址栏会进出，
+     vh 会把底部按钮藏到地址栏后面）；不支持 dvh 的浏览器自动退回上面那条 vh 规则 */
+  .dialog {
+    width: calc(100vw - var(--sp-5));
+    max-height: calc(100dvh - var(--sp-7));
+    padding: var(--sp-5);
+  }
+  .dialog__head { margin-bottom: var(--sp-4); }
+  /* 对话框底部按钮：窄屏摊平，避免"确定停用"被挤到屏幕外 */
+  .dialog__foot { flex-direction: column-reverse; }
+  .dialog__foot .btn { width: 100%; }
+
+  /* 通知条：避开顶栏，且别顶到屏幕边缘 */
+  .toast-host { top: calc(var(--topbar-h-narrow) + var(--sp-2)); width: calc(100vw - var(--sp-5)); }
+  .toast { justify-content: center; text-align: center; }
+
+  /* 上传队列：缩略图小一档，给文件名让宽 */
+  .queue__thumb { width: var(--sp-8); height: var(--sp-8); }
+  .queue__item { padding: var(--sp-2) var(--sp-3); }
+
+  /* 空态：竖向留白收一半 */
+  .empty { padding: var(--sp-7) var(--sp-4); }
+}

@@ -264,11 +264,21 @@ export function createLibraryView(options = {}) {
   const modelStatus = h('p', { className: 'library__status', id: 'model-status', 'data-role': 'model-status', text: '' });
 
   const filterCount = h('span', { className: 'library__filter-count', id: 'filter-count', 'data-role': 'filter-count', text: '未设置筛选' });
+  /**
+   * 抽屉里的关闭按钮（阶段 3.6）。它是 [data-close]，点击由 modals.register 接管 ——
+   * 行为清单 §0A 的纪律：**每个会被打开的浮层都必须先 register**，
+   * 否则 ✕ 与取消是死的（F3b 实测踩过）。桌面没有抽屉，它被 library.css 隐藏。
+   */
+  const sideClose = h('button', {
+    className: 'btn btn--icon btn--ghost library__side-close', type: 'button',
+    'data-close': '', 'aria-label': '关闭筛选面板', text: '✕',
+  });
 
   const sidebar = h('aside', { className: 'library__side', id: 'library-filters', 'data-role': 'sidebar', 'data-open': 'true' }, [
     h('div', { className: 'library__side-head' }, [
       h('h2', { className: 'library__side-title', text: '筛选' }),
       filterCount,
+      sideClose,
     ]),
     h('div', { className: 'library__side-body' }, [
       h('div', { className: 'field' }, [h('label', { for: 'album-filter', text: '相册' }), albumFilter]),
@@ -429,6 +439,21 @@ export function createLibraryView(options = {}) {
     uploadDialog.form,
   ]);
   if (modals) modals.register(uploadDialogNode, { onClose: () => { pendingFiles = []; } });
+
+  /**
+   * 筛选侧栏作为窄屏抽屉时的浮层登记（阶段 3.6）。
+   * 登记一次，之后 open/close 都走共享浮层系统 —— 于是遮罩、Esc、点遮罩关闭、
+   * Tab 焦点陷阱、关闭后焦点归还全部与对话框/详情抽屉**同一份实现**。
+   * onClose 只做一件事：把 data-open 收回来（CSS 用它决定 display）。
+   */
+  if (modals) {
+    modals.register(sidebar, {
+      onClose: () => {
+        sidebar.dataset.open = 'false';
+        filtersToggle.setAttribute('aria-expanded', 'false');
+      },
+    });
+  }
 
   const main = h('div', { className: 'library__main' }, [
     results,
@@ -1289,21 +1314,80 @@ export function createLibraryView(options = {}) {
     }
   }));
 
-  /** 筛选栏收放（窄屏抽屉）。桌面恒开，窄屏默认收起，避免侧栏把结果挤到屏幕外。 */
-  const NARROW_QUERY = '(max-width: 1080px)';
-  let narrowQuery = null;
+  /* ------------------------------------------------------------------------
+     筛选栏收放（阶段 3.6 / F8 · 决策台账 D3）
+     ------------------------------------------------------------------------
+     宽屏（≥900）：侧栏常驻在左栏，"抽屉"这个概念不存在。
+     窄屏（<900）：侧栏变成从左侧滑出的抽屉，走共享浮层系统（modals），所以
+       · 遮罩：由 modals 打开 #scrim（z-index = --z-dialog - 1，抽屉在它之上）
+       · Esc / 点遮罩：modals 统一处理
+       · ✕（.library__side-close）与"取消"：modals.register 的 [data-close] 代理
+       · 焦点：打开时聚焦抽屉内首个可焦点元素（✕），Tab 在抽屉内循环，关闭归还焦点
+     浏览器"返回"关闭：打开抽屉时压一条**同 URL** 的历史记录，popstate 时收起。
+     为什么压同 URL 而不是改 hash：改 hash 就等于换路由，会重建列表（Q4/翻页进度都丢）。
+     代价与详情抽屉一样：用 Esc/✕ 关掉后，历史里那条重复记录要按一次"看不出变化"的
+     后退键。**绝不调用 history.back()**（详情抽屉实测过：深链进入时会把用户弹出站点）。
+     ------------------------------------------------------------------------ */
 
+  const NARROW_QUERY = '(max-width: 899px)';
+  let narrowQuery = null;
+  /** 抽屉是不是自己压过一条历史记录（后退键要能把它收掉）。 */
+  let drawerHistory = false;
+
+  /** 是否处于窄屏（无 matchMedia 时按视口宽度退化判断）。 */
+  function isNarrow() {
+    if (narrowQuery) return narrowQuery.matches;
+    if (typeof window === 'undefined') return false;
+    if (window.matchMedia) return window.matchMedia(NARROW_QUERY).matches;
+    return window.innerWidth < 900;
+  }
+
+  function drawerOpen() {
+    return sidebar.dataset.open === 'true';
+  }
+
+  function openDrawer() {
+    sidebar.hidden = false;
+    sidebar.dataset.open = 'true';
+    filtersToggle.setAttribute('aria-expanded', 'true');
+    if (modals) modals.open(sidebar);          // 遮罩 + Esc + 焦点陷阱 + 焦点归还
+    if (!drawerHistory && typeof history !== 'undefined' && history.pushState) {
+      try {
+        history.pushState({ aibumFilters: true }, '', location.href);
+        drawerHistory = true;
+      } catch {
+        drawerHistory = false;                 // 压不进去就算了：Esc / 遮罩仍能关
+      }
+    }
+  }
+
+  function closeDrawer() {
+    drawerHistory = false;
+    sidebar.dataset.open = 'false';
+    filtersToggle.setAttribute('aria-expanded', 'false');
+    if (modals && modals.isOpen(sidebar)) modals.close(sidebar);
+    else sidebar.hidden = true;
+  }
+
+  /** 浏览器后退 → 收起抽屉（抽屉自己压的那条记录）。 */
+  function onDrawerPopState() {
+    if (drawerHistory) closeDrawer();
+  }
+
+  /** 视口变化 / 挂载时对账：宽屏恒开（且必须彻底脱离浮层状态），窄屏默认收起。 */
   function syncDrawerToViewport() {
-    if (!narrowQuery) return;
-    const open = !narrowQuery.matches;          // 宽屏恒开；窄屏默认收起（用户点过就以用户为准）
-    sidebar.dataset.open = open ? 'true' : 'false';
-    filtersToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    drawerHistory = false;
+    if (modals && modals.isOpen(sidebar)) modals.close(sidebar);
+    const narrow = isNarrow();
+    sidebar.hidden = false;
+    sidebar.dataset.open = narrow ? 'false' : 'true';
+    filtersToggle.setAttribute('aria-expanded', narrow ? 'false' : 'true');
   }
 
   filtersToggle.addEventListener('click', () => {
-    const open = sidebar.dataset.open === 'true';
-    sidebar.dataset.open = open ? 'false' : 'true';
-    filtersToggle.setAttribute('aria-expanded', open ? 'false' : 'true');
+    if (!isNarrow()) return;                  // 宽屏没有抽屉
+    if (drawerOpen()) closeDrawer();
+    else openDrawer();
   });
 
   /** 5.2 全选 / 取消全选 */
@@ -1479,6 +1563,8 @@ export function createLibraryView(options = {}) {
         narrowQuery = window.matchMedia(NARROW_QUERY);
         narrowQuery.addEventListener('change', syncDrawerToViewport);
       }
+      // "返回关闭"：抽屉压了一条历史记录，后退键落到这里
+      if (typeof window !== 'undefined') window.addEventListener('popstate', onDrawerPopState);
       syncDrawerToViewport();
     },
     unmount() {
@@ -1491,6 +1577,11 @@ export function createLibraryView(options = {}) {
         narrowQuery.removeEventListener('change', syncDrawerToViewport);
         narrowQuery = null;
       }
+      if (typeof window !== 'undefined') window.removeEventListener('popstate', onDrawerPopState);
+      // 卸载前必须把抽屉从浮层系统里摘干净：否则遮罩会留在屏幕上，
+      // 而且 modals.current 会指向一个已被移除的节点（下一次 open 会去 close 它）。
+      if (modals && modals.isOpen(sidebar)) modals.close(sidebar);
+      drawerHistory = false;
       clearModelHint();
       root.remove();
     },
@@ -1518,6 +1609,11 @@ export function createLibraryView(options = {}) {
     openUploadDialog,
     /** 上传遥测（4.1 的进度回调次数 / 4.6 的重复数 / 4.7 的逐字通知都在这里）。 */
     uploadTelemetry: () => ({ ...uploader.telemetry }),
+    /**
+     * 打开系统的文件选择器（阶段 3.6）。窄屏顶栏那个常驻的「上传照片」按钮点它，
+     * 于是顶栏与页面里的投递区落到**同一条**上传路径上（不复制 XHR / 串行 / 锁定规则）。
+     */
+    pickUploadFiles: () => uploadInput.click(),
     /** 队列快照（每张一行的状态）。 */
     uploadQueueSnapshot: () => uploadQueue.snapshot(),
     get uploadBusy() { return uploadBusy(); },

@@ -66,6 +66,11 @@
   justify-content: center;
   gap: var(--sp-2);
   min-height: 160px;
+  /* **不许被压缩**（阶段 3.6 实测的缺陷）：.drawer__body 是 overflow:auto 的
+     flex 项，默认 flex-shrink:1 —— 内容比 body 高时，flex 先压缩子项而不是
+     让 body 滚动，于是这块被压到几十像素高，再被自己的 overflow:hidden 裁掉，
+     表现为"预览图只剩一条"。加 flex:none 后由 body 正常滚动。 */
+  flex: none;
   border: var(--bw) solid var(--line);
   border-radius: var(--r);
   background: var(--sunken);
@@ -73,8 +78,13 @@
 }
 .detail__image {
   display: block;
-  width: 100%;
+  /* 用 max-width/max-height + auto 尺寸，让**图盒自己**收缩到贴合图片的比例：
+     写 width:100% 时，一旦 max-height 生效（窄屏 42vh），图盒会保持满宽、
+     于是左右各留一条 --sunken 的空白（实测 820 宽下留了 77px）。
+     auto 尺寸 + 双上限 = 按比例装进容器，不留空白、也不裁切。 */
+  width: auto;
   height: auto;
+  max-width: 100%;
   /* 原图往往是几千像素；这里限高，让"元信息 + 字段"在同一屏里也看得见 */
   max-height: 46vh;
   object-fit: contain;
@@ -137,13 +147,42 @@
 .detail__foot a.btn { text-decoration: none; }
 
 /* --------------------------------------------------------------------------
-   5) 断点
+   5) 断点（阶段 3.6 · F8 / 决策台账 D3）
    --------------------------------------------------------------------------
-   窄屏（<=640px）不在这里管：components.css 会把 .drawer 变成底部 sheet
-   （把手、圆角上沿、按钮并排、避开手势条），那是设计系统定的形态。
-   这里只处理宽屏宽度 —— 原图 520px 有点挤，给到 560px。
+      ≥900px   右侧抽屉，宽 560px（原图看得清，背后列表仍可见）
+      <900px   **全屏抽屉**：铺满视口，圆角与边框归零，图不再被压到半屏高；
+               背后不再需要"可见的列表"（本来也看不清），表单字段因此有充足空间。
+
+   为什么全屏（而不是 components.css §17 的底部 sheet）：详情是"编辑一张照片"的
+   长表单（预览图 + 4 个字段 + 自动标签行 + 4 个按钮），底部 sheet 的 88vh 上限
+   会把 footer 顶到手势条上、且每次都要先认"这是个能往上拉的 sheet"。
+   全屏抽屉更像"进入这张照片"，返回路径也更明确（✕ / Esc / 浏览器后退）。
    -------------------------------------------------------------------------- */
 
-@media (min-width: 641px) {
+@media (min-width: 900px) {
   .detail { width: min(560px, 100vw); }
+}
+
+@media (max-width: 899px) {
+  .detail {
+    /* 铺满视口：inset 收掉 components.css ≤640px 那份"底部 sheet"的
+       top:auto / bottom:0 / max-height:88vh / 圆角上沿 —— 它是单类选择器，
+       本文件在 components.css 之后加载，同特异性按源序覆盖。 */
+    inset: 0;
+    width: 100vw;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    transform: translateX(100%);
+  }
+  .detail[data-open="true"] { transform: none; }
+  /* 把手是底部 sheet 的"可上拉"暗示，全屏抽屉没有这个手势 */
+  .detail .drawer__grip { display: none; }
+  /* 全屏后高度充裕，图可以给大一点；仍留出字段区的空间 */
+  .detail__image { max-height: 42vh; }
+  .detail__figure { min-height: 0; }
+  /* 四个按钮：保存独占一行，其余两两一行（不改文字，只换排布） */
+  .detail__foot { flex-wrap: wrap; gap: var(--sp-2); }
+  .detail__foot [data-role="save"] { flex: 1 1 100%; }
+  .detail__foot .btn { flex: 1 1 45%; }
 }

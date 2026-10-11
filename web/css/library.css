@@ -223,6 +223,9 @@
   align-items: baseline;
   gap: var(--sp-3);
 }
+/* 抽屉里的关闭按钮（✕）：宽屏没有抽屉，所以桌面隐藏。
+   行为清单 §0A 的纪律：它是 [data-close]，由 modals.register 接管点击。 */
+.library__side-close { display: none; align-self: center; }
 .library__side-title {
   font-size: var(--fs-lg);
   font-weight: var(--fw-black);
@@ -341,8 +344,13 @@
 .library__batch .select { width: auto; min-width: 9rem; }
 .library__batch .select--sm { height: var(--ctl-h-sm); font-size: var(--fs-ctl-sm); }
 
-/* 网格：沿用 components.css 的 .photo-grid，只调间距 */
-.library__grid { gap: var(--sp-5); }
+/* 网格：沿用 components.css 的 .photo-grid，只调列数与间距。
+   列数由 §9 的断点决定（≥1180 三列 / 900–1180 两列 / <900 单列），
+   这里写桌面基准 —— 显式列数而不是 auto-fill：D3 要的就是"三档固定列数"。 */
+.library__grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sp-5);
+}
 
 /* --------------------------------------------------------------------------
    6) 照片卡的内容面（组件层 .photo 只给了封面与照片上的渐变标题栏；
@@ -509,26 +517,116 @@
 [data-role="upload-dialog-hint"][data-state="warn"] { color: var(--warn); }
 
 /* --------------------------------------------------------------------------
-   9) 窄屏：筛选变抽屉（阶段 3.5 / D3 —— 功能不减少，只是换个摆法）
+   9) 断点（阶段 3.6 · F8 / 决策台账 D3）
+   --------------------------------------------------------------------------
+   三档，与 tokens.css 末尾记的断点注释一致：
+
+     ≥1180px      结果网格 3 列，筛选侧栏常驻（左栏）
+     900–1180px   结果网格 2 列，筛选侧栏仍常驻
+     <900px       结果网格 1 列，筛选侧栏收成**从左侧滑出的抽屉**
+
+   窄屏只是**换摆法**，不减少功能：六个筛选维度（相册 / 地点 / 起止日期 /
+   只看收藏 / 排序 / 标签云）、新建相册、清空筛选、清空标签都在同一个 DOM 里，
+   抽屉打开即全部可见可点（F8 报告里有 390 宽下的逐项核对）。
+   搜索模式（文字 / 参考图 / 三档严格度）在 hero 里，从不进抽屉。
+
+   抽屉的交互（遮罩 / Esc / 点遮罩 / 焦点陷阱 / ✕）**不自己实现**：
+   交给共享浮层系统 modals（css/components.css §10 + js/components/modal.js），
+   与详情抽屉、账户安全对话框是同一份代码，层级也统一（见下面的 z-index）。
    -------------------------------------------------------------------------- */
 
-@media (max-width: 1080px) {
-  .library__body { grid-template-columns: minmax(0, 1fr); }
-  .library__drawer-toggle { display: inline-flex; }
-  .library__side {
-    position: static;
-    max-height: none;
-    display: none;
-  }
-  .library__side[data-open="true"] { display: flex; }
-  .library__search-row { flex-wrap: wrap; }
-  .library__search-field { flex: 1 1 100%; }
+@media (max-width: 1179px) {
+  .library__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-@media (max-width: 640px) {
-  .library__hero { padding: var(--sp-5); }
-  .library__dates { grid-template-columns: minmax(0, 1fr); }
-  .library__status { margin-left: 0; flex: 1 1 100%; }
-  .library__grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--sp-3); }
+@media (max-width: 899px) {
+  /* 抽屉一开，结果区就独占整个宽度 */
+  .library__body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--sp-4);
+  }
+  /* 「筛选」是窄屏下进入**全部筛选**的唯一入口，不能再是幽灵按钮
+     （幽灵按钮看起来像一行说明文字，用户不会去点它）。 */
+  .library__drawer-toggle {
+    display: inline-flex;
+    padding-inline: var(--sp-4);
+    background: var(--elev);
+    border-color: var(--line);
+    box-shadow: var(--sh-1);
+    color: var(--text);
+    font-weight: var(--fw-medium);
+  }
+  .library__drawer-toggle:hover { background: var(--sunken); }
+
+  /* --- 侧栏 = 左侧抽屉 --- */
+  .library__side {
+    position: fixed;
+    /* 从左边滑出，占满高度（含顶栏那一层：抽屉是"临时接管"的一层） */
+    inset: 0 auto 0 0;
+    /* 层级：压在共享遮罩之上。--z-dialog(50) - 1 是遮罩，所以抽屉取 --z-dialog + 1，
+       与 css/detail.css 的 .detail 同一层（同一时刻只会开一个，由 modals 保证）。 */
+    z-index: calc(var(--z-dialog) + 1);
+    width: min(340px, 88vw);
+    max-height: none;
+    padding: var(--sp-5) var(--sp-4) var(--sp-4);
+    border-left: 0;
+    border-radius: 0 var(--r-lg) var(--r-lg) 0;
+    /* display: none ↔ flex 由 data-open 切换（也顺手把它移出 Tab 序与无障碍树）；
+       出现时用 animation 而不是 transition —— 从 display:none 变回来时没有
+       "上一帧"可过渡，transition 不会播放，animation 会。 */
+    display: none;
+    animation: drawer-in var(--dur-slow) var(--ease);
+  }
+  .library__side[data-open="true"] { display: flex; }
+  .library__side-close { display: inline-flex; margin-left: var(--sp-2); }
+  /* 右侧留 8px：开关的 44px 命中区（比 38px 的开关宽 3px）不能被
+     .library__side-body 的 overflow: auto 裁掉 —— 实测过：裁掉后点最右侧
+     落在抽屉本身而不是开关上。留白看不见，命中区是真的。 */
+  .library__side-body { padding-right: var(--sp-2); overscroll-behavior: contain; }
+  /* 抽屉里的标签云不再吃视口高度百分比，改由抽屉自己滚动 */
+  .library__tagcloud { max-height: none; overflow: visible; }
+
+  /* --- 网格与卡片：窄屏收缩间距与内边距 --- */
+  .library__grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--sp-4);
+  }
+  /* 单列时卡片会占满整行，4/3 的图在平板上过高；放宽到 3/2 */
+  .library .photo__img { aspect-ratio: 3 / 2; }
+  .library .photo__caption { padding: var(--sp-3) var(--sp-3) var(--sp-1); }
+  .library .photo__tagrow { padding: 0 var(--sp-3) var(--sp-3); }
+
+  /* --- 搜索区：主输入独占一行，按钮成对 --- */
+  .library__hero { padding: var(--sp-5); gap: var(--sp-2); }
+  .library__search { gap: var(--sp-2); margin-top: var(--sp-2); }
+  .library__search-row { flex-wrap: wrap; row-gap: var(--sp-2); }
+  .library__search-field { flex: 1 1 100%; }
+  .library__search-input { height: var(--input-h); padding-inline: var(--sp-4); }
+  .library__search-row .btn--lg { height: var(--ctl-h-lg); }
+  .library__submit { flex: 1 1 auto; }
+  .library__drop { padding: var(--sp-2) var(--sp-3); }
   .library__ref-name { max-width: 18ch; }
+  .library__search-opts { gap: var(--sp-2); }
+
+  /* --- 工具条 / 批量条 / 状态行 --- */
+  .library__toolbar { gap: var(--sp-2); }
+  .library__status { margin-left: 0; flex: 1 1 100%; }
+  /* 批量条：DOM 顺序是「全选 · 计数 · 收藏 · 移动 · 相册下拉 · 删除」，
+     窄屏让下拉排到最后一整行，四个动作按钮就能挤在同一行里（原来下拉会
+     把"删除"顶到第三行）。用 order 换摆法，不动 DOM、不动处理器。 */
+  .library__batch { border-radius: var(--r); }
+  .library__batch > * { order: 1; }
+  .library__batch > .select { order: 2; flex: 1 1 100%; min-width: 0; }
+  .library__dates { grid-template-columns: minmax(0, 1fr); }
+  .library__upload-foot { gap: var(--sp-2); }
+  .library__upload-foot .upload__zone { flex: 1 1 100%; }
+  .library__upload-foot #upload { flex: 1 1 100%; }
+  .dropzone__card { padding: var(--sp-5); }
 }
+
+/* 抽屉从左侧滑入（只在 display 由 none 变为 flex 的那一帧播放） */
+@keyframes drawer-in {
+  from { transform: translateX(-100%); }
+  to   { transform: none; }
+}
+

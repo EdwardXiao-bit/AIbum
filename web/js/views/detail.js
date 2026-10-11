@@ -300,7 +300,6 @@ export function createDetailView(options = {}) {
     'aria-labelledby': 'detail-title',
     hidden: true,
   }, [
-    h('p', { className: 'drawer__grip', 'aria-hidden': 'true' }),
     head,
     form,
   ]);

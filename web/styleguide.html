@@ -176,15 +176,20 @@
 
   <section>
     <h2>2 · 字阶</h2>
-    <p class="note">中文在 11.5–15px 区间最容易糊，所以每个字号都配了固定行高。所有字号必须来自 <code>--fs-*</code>。</p>
+    <p class="note">中文在 11.5–15px 区间最容易糊，所以每个字号都配了固定行高。所有字号必须来自 <code>--fs-*</code>。
+      行高只有三档（<code>--lh-tight</code> 1.25 / <code>--lh-base</code> 1.6 / <code>--lh-loose</code> 1.75），
+      按用途挑：大标题用 tight，正文与控件用 base，字距较大的角标用 loose——不是每个字号一档。</p>
     <div class="demo demo--col">
       <div class="type-row"><span class="tag">--fs-hero</span><span class="ts-hero">记得画面，就能找到</span></div>
       <div class="type-row"><span class="tag">--fs-2xl</span><span class="ts-2xl">我的照片</span></div>
       <div class="type-row"><span class="tag">--fs-xl</span><span class="ts-xl">照片详情</span></div>
       <div class="type-row"><span class="tag">--fs-lg</span><span class="ts-lg">海边日落.jpg</span></div>
       <div class="type-row"><span class="tag">--fs-md</span><span class="ts-md">阳光下草地上的小狗</span></div>
+      <div class="type-row"><span class="tag">--fs-caption</span><span class="ts-caption">照片卡标题 14.5px</span></div>
       <div class="type-row"><span class="tag">--fs-base</span><span class="ts-base">用一句中文描述你想找的画面。</span></div>
+      <div class="type-row"><span class="tag">--fs-ctl-lg</span><span class="ts-ctl-lg">大按钮 15px</span></div>
       <div class="type-row"><span class="tag">--fs-ctl</span><span class="ts-ctl">默认按钮 / 列表项 13.5px</span></div>
+      <div class="type-row"><span class="tag">--fs-ctl-sm</span><span class="ts-ctl-sm">小按钮 / 小控件 12.5px</span></div>
       <div class="type-row"><span class="tag">--fs-sm</span><span class="ts-sm">勾选后立即筛选 · 多选匹配任一标签</span></div>
       <div class="type-row"><span class="tag">--fs-xs</span><span class="ts-xs">PERSONAL LIBRARY</span></div>
     </div>
@@ -920,7 +925,7 @@
           </div>
         </aside>
       </div>
-      <span class="hint">把手只在 sheet 形态出现（<code>.drawer--sheet .drawer__grip</code>）；宽屏右侧抽屉形态下把手隐藏。</span>
+      <span class="hint">把手是 sheet 形态专有的（<code>.drawer--sheet .drawer__grip</code>）。应用里的详情抽屉（<code>.drawer.detail</code>）在窄屏是<strong>铺满视口</strong>的全屏抽屉、没有上拉手势，所以它不渲染把手。</span>
     </div>
   </section>
 
@@ -945,7 +950,7 @@
           </div>
         </article>
       </div>
-      <span class="hint">说明文字用 --invert（恒为与图片对比的白），不再写死 #fff。</span>
+      <span class="hint">说明文字用 --on-photo（恒为与图片对比的白），不再写死 #fff。</span>
     </div>
     <div class="demo demo--col">
       <span class="demo__label">遮罩与玻璃（--scrim + --scrim-op · --glass）</span>

@@ -176,8 +176,6 @@
     transform: translateX(100%);
   }
   .detail[data-open="true"] { transform: none; }
-  /* 把手是底部 sheet 的"可上拉"暗示，全屏抽屉没有这个手势 */
-  .detail .drawer__grip { display: none; }
   /* 全屏后高度充裕，图可以给大一点；仍留出字段区的空间 */
   .detail__image { max-height: 42vh; }
   .detail__figure { min-height: 0; }

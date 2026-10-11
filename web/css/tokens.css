@@ -158,8 +158,7 @@
   --blur-lg: 14px;
   --blur-pad: 3px;        /* 滚动条轨道留白 */
 
-  /* 复选框与滚动条 */
-  --check-size: 16px;
+  /* 滚动条 */
   --scrollbar: 10px;
 
   /* 微调偏移量（焦点环 / 悬停位移 / 提示位移） */
@@ -182,7 +181,7 @@
   --caption-a2: .68;   /* 白照片 + 68% 压暗时正文仍 ≥ 4.5:1 */
 
   /* 压在照片上的文字/标签/选择框（与主题无关：照片本身明暗不可控，
-     所以这里恒为白，不跟 --text/--invert 走；压暗层由 --overlay + --caption-a* 提供） */
+     所以这里恒为白，不跟 --text 走；压暗层由 --overlay + --caption-a* 提供） */
   --on-photo: #ffffff;
   --tag-on-photo:      #ffffff2b;
   --tag-on-photo-auto: #ffffffd9;

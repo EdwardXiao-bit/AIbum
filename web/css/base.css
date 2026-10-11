@@ -318,25 +318,9 @@ code, kbd, samp, pre {
 .gap-5 { --gap: var(--sp-5); }
 
 /* --------------------------------------------------------------------------
-   6) 基础控件：复选框 / 链接 / 选中文本
-   -------------------------------------------------------------------------- */
-.checkbox {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-2);
-  font-size: var(--fs-base);
-  cursor: pointer;
-}
-
-.checkbox input[type="checkbox"] {
-  width: var(--check-size); height: var(--check-size);
-  margin: 0;
-  accent-color: var(--accent);
-  cursor: pointer;
-}
-
-.checkbox input[type="checkbox"]:disabled { cursor: not-allowed; }
-.checkbox:has(input[type="checkbox"]:disabled) { color: var(--faint); cursor: not-allowed; }
+   6) 基础控件：链接 / 选中文本
+   --------------------------------------------------------------------------
+   复选框走组件层的 .check（components.css），这里不再放第二套 .checkbox。 */
 
 a {
   color: var(--accent-ink);

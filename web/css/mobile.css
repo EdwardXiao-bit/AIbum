@@ -126,20 +126,15 @@
   .chip { min-height: var(--touch); padding-inline: var(--sp-4); }
   .chip--plain { min-height: 0; }          /* 认证页的示例标签是纯文案，不是目标 */
 
-  /* --- 列表式可点项 --- */
-  .menu__item,
-  .taglist-item { min-height: var(--touch); }
-  /* 严格度三档（radio 的 label） */
+  /* --- 严格度三档（radio 的 label） --- */
   .library__seg-item { min-height: var(--touch); }
   .library__seg { padding: var(--mark-gap-sm); }
-  /* 分段控件与队列行内的小按钮 */
-  .seg button { min-height: var(--touch); }
-  .queue__act { min-height: var(--touch); min-width: var(--touch); }
+  /* 队列行里的"文字"动作（重试 / 移除）。应用用的是 .queue__act--text
+     （js/components/upload-queue.js:110/114），不是设计系统的纯图标 .queue__act。 */
+  .queue__act--text { min-height: var(--touch); min-width: var(--touch); }
 
   /* --- 复选框那类"标签即目标"的控件：撑高 label 即可（label 会转发点击给 input） --- */
-  .checkbox,
   .check { min-height: var(--touch); }
-  .checkbox input[type="checkbox"] { width: var(--check-size); height: var(--check-size); }
 
   /* --- 开关：视觉仍是 38×22，命中区撑到 44×44 ---
      ::before 铺一个以自身为中心的 44×44 方块。伪元素不参与 elementFromPoint 的

@@ -146,10 +146,10 @@
 .code-hint { color: var(--muted); font-size: var(--fs-sm); }
 
 /* --------------------------------------------------------------------------
-   4) 占位视图
+   4) 首屏占位
    --------------------------------------------------------------------------
-   本卡（阶段 3.1）只交付认证视图；相册主界面（F4）/ 照片详情（F5）/ 管理后台（F7）
-   是独立卡片。这里只放一句诚实的占位，不做任何主界面结构，避免和后续卡片抢地盘。
+   app.html 的 #boot-hint 用它：/api/auth/me 返回前不闪错误的一屏。
+   （views/placeholder.js 那个"占位视图"已删——四个视图都实现后它无人 import。）
    -------------------------------------------------------------------------- */
 
 .placeholder {
@@ -159,13 +159,6 @@
   align-items: flex-start;
   max-width: 62ch;
 }
-.placeholder__list {
-  margin: 0;
-  padding-left: var(--sp-5);
-  color: var(--muted);
-  font-size: var(--fs-base);
-}
-.placeholder__list li { margin-block: var(--sp-1); }
 
 @media (max-width: 900px) {
   .auth {

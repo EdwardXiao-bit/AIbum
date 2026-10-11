@@ -152,16 +152,21 @@ section > .note { color: var(--muted); font-size: var(--fs-sm); margin: 0 0 var(
 .sg-box { width: 160px; height: 80px; border-radius: var(--r); border: var(--bw) solid var(--line); }
 .sg-center { display: grid; place-items: center; }
 
-/* --- 字阶 demo：字号 + 字重 + 字距一起打包，避免 HTML 里写三条声明 --- */
-.ts-hero { font-size: var(--fs-hero); font-weight: var(--fw-black); letter-spacing: var(--ls-tight); }
-.ts-2xl { font-size: var(--fs-2xl); font-weight: var(--fw-black); }
-.ts-xl { font-size: var(--fs-xl); font-weight: var(--fw-bold); }
-.ts-lg { font-size: var(--fs-lg); font-weight: var(--fw-medium); }
-.ts-md { font-size: var(--fs-md); }
-.ts-base { font-size: var(--fs-base); }
-.ts-ctl { font-size: var(--fs-ctl); }
-.ts-sm { font-size: var(--fs-sm); color: var(--muted); }
-.ts-xs { font-size: var(--fs-xs); color: var(--faint); letter-spacing: var(--ls-wide); }
+/* --- 字阶 demo：字号 + 行高 + 字重 + 字距一起打包，避免 HTML 里写四条声明 ---
+   行高只有三档令牌，按用途挑（不是每个字号一档）：大标题 tight、正文与控件 base、角标 loose。
+   这里显式写出来，是为了让"每个字号都配了固定行高"这句话在自查页上看得见、可验证。 */
+.ts-hero { font-size: var(--fs-hero); line-height: var(--lh-tight); font-weight: var(--fw-black); letter-spacing: var(--ls-tight); }
+.ts-2xl { font-size: var(--fs-2xl); line-height: var(--lh-tight); font-weight: var(--fw-black); }
+.ts-xl { font-size: var(--fs-xl); line-height: var(--lh-tight); font-weight: var(--fw-bold); }
+.ts-lg { font-size: var(--fs-lg); line-height: var(--lh-tight); font-weight: var(--fw-medium); }
+.ts-md { font-size: var(--fs-md); line-height: var(--lh-base); }
+.ts-caption { font-size: var(--fs-caption); line-height: var(--lh-base); }
+.ts-base { font-size: var(--fs-base); line-height: var(--lh-base); }
+.ts-ctl-lg { font-size: var(--fs-ctl-lg); line-height: var(--lh-base); }
+.ts-ctl { font-size: var(--fs-ctl); line-height: var(--lh-base); }
+.ts-ctl-sm { font-size: var(--fs-ctl-sm); line-height: var(--lh-base); }
+.ts-sm { font-size: var(--fs-sm); line-height: var(--lh-base); color: var(--muted); }
+.ts-xs { font-size: var(--fs-xs); line-height: var(--lh-loose); color: var(--faint); letter-spacing: var(--ls-wide); }
 /* 只改字号、不动字重（<strong> 与小标题用，避免把粗体压成中等） */
 .sg-fs-lg { font-size: var(--fs-lg); }
 

@@ -62,7 +62,7 @@
     transition: none !important;
     animation: none !important;
   }
-  .spinner, .loader__spin { animation: none !important; }
+  .spinner { animation: none !important; }
   .skel { animation: none !important; background: var(--sunken); }
 }
 
@@ -177,7 +177,6 @@
   font-weight: var(--fw-medium);
 }
 .hint { font-size: var(--fs-xs); color: var(--faint); }
-.label__req { color: var(--danger); }
 
 .input, .select, .textarea {
   height: var(--input-h);
@@ -475,7 +474,6 @@
 .table__num { text-align: right; font-variant-numeric: tabular-nums; }
 .table tr[aria-selected="true"] td { background: var(--accent-soft); }
 .table[aria-busy="true"] { opacity: var(--busy-opacity); }
-.table--error { box-shadow: inset 0 0 0 var(--bw) var(--danger); }
 
 /* --------------------------------------------------------------------------
    9) 空态 / 骨架 / 分隔
@@ -579,7 +577,6 @@
 }
 .toast--ok     { border-color: color-mix(in srgb, var(--ok) 35%, transparent); }
 .toast--danger { border-color: color-mix(in srgb, var(--danger) 35%, transparent); }
-.toast[aria-busy="true"] .spinner { margin-inline-start: auto; }
 
 /* --------------------------------------------------------------------------
    11) 【补】下拉菜单  .menu
@@ -620,7 +617,6 @@
   animation: pop-in var(--dur) var(--ease);
 }
 .menu--right { left: auto; right: 0; }
-.menu--up { top: auto; bottom: calc(100% + var(--sp-2)); }
 
 /* 打开：两种写法都支持 */
 .menu[data-open="true"],
@@ -1127,7 +1123,6 @@
 }
 .taginput[aria-disabled="true"] .taginput__chip { opacity: var(--btn-disabled-opacity); }
 .taginput[aria-busy="true"] { cursor: progress; opacity: var(--busy-opacity); }
-.taginput--invalid,
 .taginput[data-state="error"] {
   border-color: var(--danger);
   box-shadow: 0 0 0 var(--ring-w) color-mix(in srgb, var(--danger) 22%, transparent);
@@ -1324,7 +1319,8 @@
    窄屏媒体查询只负责"把普通 .drawer 也套用同一套规则"，避免两处漂移。
    -------------------------------------------------------------------------- */
 @media (max-width: 640px) {
-  /* 窄屏下普通抽屉 = sheet 形态：复用同一组属性 */
+  /* 窄屏下普通抽屉 = sheet 形态：摆法/圆角复用 .drawer--sheet 那一组属性
+     （把手不在此列：应用里的详情抽屉在窄屏是铺满视口的全屏抽屉，没有上拉手势） */
   .drawer {
     top: auto;
     left: 0;
@@ -1338,15 +1334,6 @@
     transform: translateY(100%);
   }
   .drawer[data-open="true"] { transform: none; }
-  .drawer__grip {
-    display: block;
-    width: var(--sp-8);
-    height: var(--sp-1);
-    margin: var(--sp-2) auto 0;
-    border-radius: var(--r-pill);
-    background: var(--line);
-    flex: none;
-  }
   .drawer__foot {
     /* 移动端把按钮摊平、加大点击区，并避开系统手势条 */
     gap: var(--sp-3);
@@ -1355,15 +1342,11 @@
   .drawer__foot .btn { flex: 1; }
 }
 
-/* 宽屏时把手不显示：只有底部 sheet 形态需要把手，
-   而 .drawer--sheet 那组规则里会把把手重新打开。 */
-@media (min-width: 641px) {
-  .drawer:not(.drawer--sheet) .drawer__grip { display: none; }
-}
-
 /* 底部 sheet 形态：不靠断点，显式写出来。
    一是自查页要在宽屏上也能看到这一形态（自查页用 .drawer--sheet[data-forced="true"]），
-   二是窄屏媒体查询里的那套声明太长，直接复用这里的定义，避免两处漂移。 */
+   二是窄屏媒体查询里的那套声明太长，直接复用这里的定义，避免两处漂移。
+   应用里的详情抽屉是 .drawer.detail（**不是** sheet），detail.css 在窄屏把它铺满视口，
+   所以它用不到把手——把手只有这里的 sheet 变体需要。 */
 .drawer--sheet {
   top: auto;
   left: 0;

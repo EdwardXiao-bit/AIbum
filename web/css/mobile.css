@@ -106,9 +106,6 @@
      （js/components/upload-queue.js:110/114），不是设计系统的纯图标 .queue__act。 */
   .queue__act--text { min-height: var(--touch); min-width: var(--touch); }
 
-  /* --- 复选框那类"标签即目标"的控件：撑高 label 即可（label 会转发点击给 input） --- */
-  .check { min-height: var(--touch); }
-
   /* --- 开关：视觉仍是 38×22，命中区撑到 44×44 ---
      ::before 铺一个以自身为中心的 44×44 方块。伪元素不参与 elementFromPoint 的
      返回值，命中的元素仍是开关本身，所以"点得到"与"看起来多大"解耦。 */

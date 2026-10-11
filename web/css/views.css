@@ -59,20 +59,18 @@
 
 .topbar__portal,
 .topbar__account { margin-left: auto; }
-.topbar__account {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
+/* F17（决策 D1）：账号区的形态从"用户名文字 + 四个横排按钮"变成
+   "头像按钮 + 它下面的 .menu 面板"。所以这里不再是 flex 横排，而是面板的定位上下文：
+   .menu 是 position:absolute，锚在这个 wrapper 上（right:0 → 面板右缘与按钮右缘对齐，
+   桌面下向左展开，不会把顶栏撑宽）。 */
+.topbar__account { position: relative; display: inline-flex; }
+.topbar__avatar {
+  /* 头像按钮：.btn--icon 定外观，尺寸沿用设计系统的控件高度（40px） */
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
 }
-.topbar__user {
-  font-size: var(--fs-ctl);
-  font-weight: var(--fw-medium);
-  color: var(--muted);
-  max-width: 22ch;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+.topbar__avatar:hover { background: var(--sunken); }
 .topbar__portal {
   font-size: var(--fs-ctl);
   color: var(--muted);

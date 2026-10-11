@@ -39,18 +39,49 @@
   <header class="topbar">
     <a class="topbar__brand" id="brand" href="#/library">AIbum<small>智慧相册</small></a>
     <a class="topbar__portal" id="portal-link" href="/admin">管理员入口</a>
-    <!-- 窄屏收纳（阶段 3.6）：上传常驻可见；次级入口（用户名 / 我的相册 / 账户安全 /
-         管理后台 / 退出）由 #topbar-menu-toggle 收进 #account 这个下拉面板。
-         宽屏下这两个按钮被 mobile.css 隐藏（display:none），顶栏的形态与 F1–F7 一致。 -->
+    <!-- 窄屏收纳（阶段 3.6）：上传常驻可见；次级入口（我的相册 / 账户安全 /
+         管理后台 / 退出）收进 #account 这个面板。
+         F17（决策 D1）改了形态：触发按钮由「☰ + 用户名文字」变成**头像按钮**
+         （`#account-button`）；面板本身改用设计系统的 `.menu`
+         （css/components.css 598-731 已备好 ARIA 契约，键盘层在 js/components/menu.js），
+         头像按钮在**所有宽度**都是唯一触发按钮，旧 ☰ 已删除（窄屏不再多一个按钮）。
+         宽屏下面板由 views.css 定位在按钮正下方右对齐，窄屏见 mobile.css。 -->
     <button class="btn btn--sm topbar__upload" id="topbar-upload" type="button" hidden>上传照片</button>
-    <button class="btn btn--icon btn--ghost topbar__menu-toggle" id="topbar-menu-toggle" type="button"
-            aria-expanded="false" aria-controls="account" aria-label="更多入口" hidden>☰</button>
-    <div class="topbar__account" id="account" hidden>
-      <span class="topbar__user" id="username"></span>
-      <a class="btn btn--sm btn--ghost" id="library-link" href="#/library" hidden>我的相册</a>
-      <button class="btn btn--sm btn--ghost" id="security-button" type="button">账户安全</button>
-      <button class="btn btn--sm btn--ghost" id="admin-button" type="button" hidden>管理后台</button>
-      <button class="btn btn--sm" id="logout" type="button">退出</button>
+    <div class="topbar__account" id="account">
+      <!-- 头像按钮：内容（首字 + 底色）由 js/components/avatar.js 按 user.id 生成，
+           D1b 已定"头像只能是生成的、不做上传"。aria-haspopup/aria-expanded 由
+           createMenu 写入（只有一处真相）。 -->
+      <button class="btn btn--icon btn--ghost topbar__avatar" id="account-button" type="button"
+              aria-controls="account" hidden>
+        <span class="avatar avatar--sm" data-role="avatar" aria-hidden="true"></span>
+      </button>
+      <div class="menu menu--right menu--account" id="account-menu" role="menu" aria-labelledby="account-button">
+        <!-- ① 头部：头像 + 用户名（+ 管理员徽章）。用户名同时是面板的无障碍名字来源。 -->
+        <div class="menu__head">
+          <span class="avatar" data-role="avatar" aria-hidden="true"></span>
+          <span class="menu__user" id="account-username"></span>
+          <span class="badge badge--accent" id="account-badge" hidden>管理员</span>
+        </div>
+        <!-- ② 外观：六档主题（决策 D1 的**新**位置，原先在 #dialog-security 里）。
+             用 .seg 而不是 menuitemradio：六档是"分段选择"的形态（D1 只要求迁位置，
+             没要求换形态）。它也在 .menu 里，但**不参与方向键遍历**（见 menu.js 的
+             ITEM_SELECTOR：面板里只有 [role^="menuitem"] 才进 ↑↓ 序列）。 -->
+        <div class="menu__section" data-role="appearance">
+          <span class="menu__label" id="appearance-label">外观</span>
+          <div class="seg" id="appearance-themes" role="group" aria-labelledby="appearance-label"></div>
+        </div>
+        <div class="menu__sep" role="separator"></div>
+        <!-- ③④⑤⑥ 次级入口。我的相册是链接（走路由），其余是按钮。 -->
+        <a class="menu__item" id="library-link" role="menuitem" href="#/library" hidden>我的相册</a>
+        <button class="menu__item" id="security-button" role="menuitem" type="button">账户安全</button>
+        <button class="menu__item" id="admin-button" role="menuitem" type="button" hidden>管理后台</button>
+        <!-- 退出用 --danger 变体：它是这一列里唯一的破坏性动作 -->
+        <button class="menu__item menu__item--danger" id="logout" role="menuitem" type="button">退出</button>
+      </div>
+      <!-- 头像按钮的无障碍名字。用**真实文本节点**而不是 aria-label：F3 的验收读的就是
+           #username 的 textContent（_verify-f3-auth.mjs:339），改名/改属性会静默废掉那条基线。
+           它同时是头像按钮的可及名字（`.sr-only` 是 base.css 既有的屏幕阅读器专用类）。 -->
+      <span class="sr-only" id="username"></span>
     </div>
   </header>
 
@@ -96,18 +127,10 @@
         <button class="btn btn--ghost" type="button" data-close>取消</button>
       </div>
     </form>
-    <!-- 外观（F9 ① / 决策 D1：主题入口就放在「账户安全」里，**不是**新开一个对话框）。
-         位置在 </form> **之外**是必须的：openSecurity() 会 passwordForm.reset()，
-         若这排按钮在表单内，reset() 会把选择打回 HTML 默认值，而 localStorage 里还是原来那档
-         —— 界面与实际主题就此分叉。六档按钮由 js/views/account.js 按 theme.js 的
-         THEME_CHOICES / THEME_LABELS 建（档位与文案只有那一份真相）。 -->
-    <div class="dialog__section" data-role="appearance">
-      <div class="dialog__section-head">
-        <span class="label" id="appearance-label">外观</span>
-        <span class="dialog__section-hint">只影响这台设备上的显示</span>
-      </div>
-      <div class="seg" id="appearance-themes" role="group" aria-labelledby="appearance-label"></div>
-    </div>
+    <!-- 外观六档**不在这里**（F17 / 决策 D1）：主题入口已迁到顶栏账号面板
+         （见上面 #account-menu 的 .menu__section[data-role="appearance"]）。
+         F9 当时放在本对话框里的那份区块已随之删除 —— 决策 D1 的理由是
+         "主题是账户级偏好，与账户安全（改密码/恢复码）是两件事，混在一起语义不对"。 -->
   </div>
 
   <div class="dialog" id="dialog-forgot" role="dialog" aria-modal="true" aria-labelledby="forgot-title" hidden>

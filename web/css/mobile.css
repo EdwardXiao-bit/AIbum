@@ -9,8 +9,9 @@
      视图样式里（library.css §9 / detail.css §5 / admin.css §4），
      本文件只管**跨视图**的三件事：
 
-       1) 顶栏收纳：窄屏只留「品牌 · 上传 · 菜单」，次级入口（用户名 / 我的相册 /
-          账户安全 / 管理后台 / 退出）收进下拉菜单。**上传按钮保留常驻**。
+       1) 顶栏收纳：窄屏只留「品牌 · 上传 · 头像」，次级入口（我的相册 / 账户安全 /
+          管理后台 / 退出）收进头像按钮下的 .menu 面板。**上传按钮保留常驻**。
+          F17（决策 D1）：原来的 ☰ 按钮已删除，头像按钮在**所有宽度**都是唯一触发按钮。
        2) 触控目标 ≥ 44×44 CSS px：按钮 / 芯片 / 复选卡 / 开关。
           开关与照片卡上的复选卡**视觉尺寸不变**，靠 ::before 把命中区撑到 44 —— 
           视觉大小与可点范围是两件事，44 是手指的尺寸，不是图标的尺寸。
@@ -36,13 +37,12 @@
    --------------------------------------------------------------------------
    DOM 结构不变，只换摆法：
      .topbar__upload        窄屏才出现（上传是最高频动作，必须常驻可见）
-     .topbar__menu-toggle   窄屏才出现（☰）
-     .topbar__account       窄屏不再是横向一排，而是菜单按钮下的下拉面板
-   三个节点的 hidden 由 js/app.js 按登录态与当前视图设，这里只管窄屏的形态。
+     .topbar__account       头像按钮常驻；它下面的 .menu 面板由绝对定位改成
+                            "贴着顶栏、左右各留 --sp-4"的定宽浮层
+   节点的 hidden 由 js/app.js 按登录态与当前视图设，这里只管窄屏的形态。
    -------------------------------------------------------------------------- */
 
-.topbar__upload,
-.topbar__menu-toggle { display: none; }
+.topbar__upload { display: none; }
 
 @media (max-width: 899px) {
   .topbar {
@@ -51,53 +51,24 @@
     min-height: 0;
     height: var(--topbar-h-narrow);
   }
-  /* 上传按钮靠右推：它是常驻项，菜单按钮贴在它右边 */
+  /* 上传按钮靠右推：它是常驻项，头像按钮贴在它右边（头像自带 margin-left:auto） */
   .topbar__upload { display: inline-flex; margin-left: auto; }
-  .topbar__menu-toggle { display: inline-flex; }
 
-  /* 菜单按钮下的下拉：复用设计系统的浮层观感（与 .menu 同款），
-     但它是**一列按钮**，所以用 flex 列而不是 .menu__item。 */
-  .topbar__account {
-    position: absolute;
-    top: calc(100% + var(--sp-2));
+  /* F17 ④：窄屏面板不溢出。
+     面板本来是 position:absolute + .menu--right（锚在头像按钮上，右缘对齐）——
+     桌面下它向左展开没问题，但窄屏里 6 档主题要横排，面板会比按钮宽很多，
+     再靠"锚在按钮上"就可能顶出左边。这里改成贴着视口：左右各留一个 --sp-4，
+     宽度由 max-height/内容决定，所以既不会溢出也会右对齐（右边界就是视口右边距）。
+     注意 .menu 的 min-width: var(--menu-w)（184px）在 390 视口下是安全的
+     （390-2×16=358 > 184），不必再压。 */
+  .topbar__account .menu {
+    position: fixed;
+    top: calc(var(--topbar-h-narrow) + var(--sp-1));
+    left: var(--sp-4);
     right: var(--sp-4);
-    z-index: var(--z-pop);
-    margin-left: 0;
-    display: none;
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--sp-2);
-    min-width: min(232px, calc(100vw - var(--sp-6)));
-    padding: var(--sp-3);
-    background: var(--elev);
-    border: var(--bw) solid var(--line);
-    border-radius: var(--r);
-    box-shadow: var(--sh-2);
-    animation: pop-in var(--dur) var(--ease);
+    width: auto;
+    max-height: calc(100dvh - var(--topbar-h-narrow) - var(--sp-6));
   }
-  .topbar__account[data-open="true"] { display: flex; }
-  /* 用户名在面板里当标题行，不再挤在顶栏中间 */
-  .topbar__account .topbar__user {
-    max-width: none;
-    padding: 0 var(--sp-2) var(--sp-2);
-    border-bottom: var(--bw) solid var(--line-soft);
-  }
-  /* 面板里的入口统一成"菜单项"形态（左对齐、无边框、悬停底色）：
-     原来四个按钮各带自己的 .btn 观感（退出有边框、其余是幽灵），
-     竖排放在一起像拼错的表格。这里对齐 css/components.css 的 .menu__item。 */
-  .topbar__account .btn {
-    width: 100%;
-    justify-content: flex-start;
-    padding-inline: var(--sp-2);
-    background: transparent;
-    border-color: transparent;
-    box-shadow: none;
-    color: var(--text);
-    font-size: var(--fs-ctl);
-  }
-  .topbar__account .btn:hover { background: var(--sunken); color: var(--text); }
-  /* 未登录时顶栏只有品牌 + 管理员入口，入口文字收一档免得换行 */
-  .topbar__portal { font-size: var(--fs-sm); }
   /* 顶栏里的两个文字链接也是手指目标（品牌是回主界面的入口） */
   .topbar__brand,
   .topbar__portal {
@@ -105,6 +76,8 @@
     align-items: center;
     min-height: var(--touch);
   }
+  /* 未登录时顶栏只有品牌 + 管理员入口，入口文字收一档免得换行 */
+  .topbar__portal { font-size: var(--fs-sm); }
 }
 
 /* --------------------------------------------------------------------------
@@ -176,9 +149,9 @@
   .input,
   .select { min-height: var(--touch); }
 
-  /* --- F9 ① 账户安全里的外观六档：.seg 只改了横向内边距，
+  /* --- F17 ② 账号面板里的外观六档：.seg 只改了横向内边距，
          窄屏下按钮高度会落在 ~24px，够不着手指尺寸 --- */
-  .dialog__section .seg button { min-height: var(--touch); }
+  .menu__section .seg button { min-height: var(--touch); }
 }
 
 /* --------------------------------------------------------------------------

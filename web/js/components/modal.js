@@ -44,6 +44,58 @@ export function createModals(options) {
   let current = null;
   /** 打开前的焦点，关闭时归还（阶段 4.6 的焦点管理，先在这里落地）。 */
   let restoreFocus = null;
+  /**
+   * 最后一个"不在任何对话框里"的焦点元素。
+   *
+   * 为什么不能只用 show() 里的 doc.activeElement：**点击本身会先把焦点挪走**。
+   * F17 把「账户安全」搬进顶栏账号面板后实测到：真点面板里的条目时，浏览器会把焦点
+   * 从面板按钮（触发按钮）移到 body，点击监听这时才跑 —— 于是 show() 抓到的 activeElement
+   * 是 body，关闭对话框时"归还焦点"无处可还（实测 focusout 之后 active 就是 BODY）。
+   * focusin 是同步、且在 focusout 之后立刻触发的事件，用它记下"最后一个正常聚焦的元素"
+   * 就绕开了这个顺序问题。
+   */
+  let lastFocusOutside = null;
+
+  doc.addEventListener('focusin', event => {
+    const target = event.target;
+    if (!target || typeof target.focus !== 'function') return;
+    for (const dialog of registry.keys()) {
+      if (dialog.contains(target)) return;      // 对话框内部的焦点不算"归还目标"
+    }
+    lastFocusOutside = target;
+  }, true);
+
+  /**
+   * 关闭时要归还给谁：优先"打开前记下的那个"（含 show() 抓到的与 focusin 记下的）。
+   * 三个过滤器缺一不可：
+   *   ① 元素还在文档里（视图卸载后就没了）
+   *   ② 元素**真的能接收焦点**（渲染出来了）。这条是实测出来的：F17 把「账户安全」搬进
+   *      顶栏账号面板后，关闭对话框时 `focus()` 会被调用在一个 `display:none` 的菜单条目上
+   *      —— 调用静默失败，焦点落到 body。基线（按钮常驻顶栏）时它一直是可见的，所以这条
+   *      以前不需要。
+   *   ③ 不在对话框内部（否则焦点会停在刚隐藏的对话框里）
+   */
+  function focusReturnTarget(dialog) {
+    const candidates = [restoreFocus, lastFocusOutside];
+    for (const node of candidates) {
+      if (!node || typeof node.focus !== 'function') continue;
+      if (!doc.contains(node)) continue;
+      if (dialog && dialog.contains(node)) continue;
+      if (!isRendered(node)) continue;
+      return node;
+    }
+    return null;
+  }
+
+  /** 元素当前是否真的渲染出来了（能接收焦点）。position:fixed 下 offsetParent 恒为 null，
+      所以按 §0A 的教训用 rect + display，而不是 offsetParent。 */
+  function isRendered(node) {
+    if (node === doc.body || node === doc.documentElement) return true;
+    const style = doc.defaultView ? doc.defaultView.getComputedStyle(node) : null;
+    if (style && (style.display === 'none' || style.visibility === 'hidden')) return false;
+    return node.getBoundingClientRect().width > 0;
+  }
+
   /** dialog → { onClose, closeOnScrim } */
   const registry = new Map();
 
@@ -66,9 +118,8 @@ export function createModals(options) {
     dialog.hidden = true;
     if (current === dialog) current = null;
     if (!current) scrim.hidden = true;
-    if (restoreFocus && typeof restoreFocus.focus === 'function' && doc.contains(restoreFocus)) {
-      restoreFocus.focus();
-    }
+    const target = focusReturnTarget(dialog);
+    if (target) target.focus();
     restoreFocus = null;
   }
 

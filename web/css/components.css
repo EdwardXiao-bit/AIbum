@@ -379,6 +379,60 @@
 .badge--danger { box-shadow: inset 0 0 0 var(--bw) color-mix(in srgb, var(--danger) 24%, transparent); }
 
 /* --------------------------------------------------------------------------
+   6b) 生成头像  .avatar（F17 / 决策 D1b）
+   --------------------------------------------------------------------------
+   **头像只能是生成的**：users 表没有 avatar 字段、后端一行不改（D1b 已与用户确认）。
+   内容 = 用户名首字（CJK 取首字 / 拉丁取首字母大写），底色 = 由 user.id 决定的
+   `data-avatar="0..5"`（js/components/avatar.js 写，同一个人永远同色）。
+
+   为什么颜色不写进 JS：CSP（§0A E1/E5）不允许 HTML 里的 style="..."，动态样式只能走
+   CSSOM；而"六个固定色"根本不需要动态值 —— 六个色族各一个变量，亮/暗由 color-mix 算。
+   六个色族是从既有语义令牌里挑的（accent / ok / warn / danger / stat / 中性 ink），
+   没有新增颜色常量 —— 与 tokens.css 的分工一致。
+
+   用法：
+     <span class="avatar" data-avatar="3" aria-hidden="true">海</span>
+     <span class="avatar avatar--sm" …>E</span>   （顶栏按钮里的小号）
+   -------------------------------------------------------------------------- */
+.avatar {
+  --avatar-size: 36px;
+  --avatar-ink: var(--accent-ink);
+  --avatar-bg: var(--accent-soft);
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--avatar-size);
+  height: var(--avatar-size);
+  border-radius: var(--r-pill);
+  background: var(--avatar-bg);
+  color: var(--avatar-ink);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  line-height: 1;
+  user-select: none;
+}
+.avatar--sm { --avatar-size: 26px; font-size: var(--fs-xs); }
+.avatar[data-avatar="0"] { --avatar-ink: var(--accent-ink); --avatar-bg: var(--accent-soft); }
+.avatar[data-avatar="1"] {
+  --avatar-ink: color-mix(in srgb, var(--ok) 66%, var(--text));
+  --avatar-bg: color-mix(in srgb, var(--ok) 18%, var(--elev));
+}
+.avatar[data-avatar="2"] {
+  --avatar-ink: color-mix(in srgb, var(--warn) 60%, var(--text));
+  --avatar-bg: color-mix(in srgb, var(--warn) 20%, var(--elev));
+}
+.avatar[data-avatar="3"] {
+  --avatar-ink: color-mix(in srgb, var(--danger) 62%, var(--text));
+  --avatar-bg: color-mix(in srgb, var(--danger) 16%, var(--elev));
+}
+.avatar[data-avatar="4"] { --avatar-ink: var(--stat-ink); --avatar-bg: var(--stat-bg); }
+.avatar[data-avatar="5"] {
+  --avatar-ink: var(--muted);
+  --avatar-bg: color-mix(in srgb, var(--faint) 26%, var(--sunken));
+}
+
+/* --------------------------------------------------------------------------
    7) 照片卡  .photo
    -------------------------------------------------------------------------- */
 .grid-demo, .photo-grid {
@@ -563,25 +617,9 @@
 .dialog__close { margin-left: auto; }
 .dialog__foot { display: flex; gap: var(--sp-2); justify-content: flex-end; margin-top: var(--sp-6); }
 
-/* 对话框里的"区域"（F9 ① 的「外观」）：与上面的表单分成两段，但不新开一个对话框（D1）。
-   它是 #password-form 的**兄弟**节点，不在表单内 —— 表单的 reset() 会把范围内的控件
-   打回 HTML 默认值，主题选择不能被它牵着走（见 app.html 里的注释）。 */
-.dialog__section {
-  margin-top: var(--sp-5);
-  padding-top: var(--sp-4);
-  border-top: var(--bw) solid var(--line-soft);
-}
-.dialog__section-head {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: var(--sp-2);
-  margin-bottom: var(--sp-3);
-}
-.dialog__section-hint { font-size: var(--fs-xs); color: var(--faint); }
-/* 六档并排：窄对话框里换行，不许把对话框撑出横向滚动 */
-.dialog__section .seg { flex-wrap: wrap; gap: var(--mark-gap-xs); }
-.dialog__section .seg button { white-space: nowrap; }
+/* 说明：F9 曾有一个 .dialog__section（账户安全对话框里的「外观」六档）。
+   F17 / 决策 D1 把主题入口迁到顶栏账号面板后，它连同配套的 .dialog__section-head /
+   .dialog__section-hint 一起删掉 —— 留着的唯一后果是"以后有人照着它再造一个区块"。 */
 
 .drawer {
   position: fixed; top: 0; right: 0; bottom: 0;
@@ -658,6 +696,10 @@
   animation: pop-in var(--dur) var(--ease);
 }
 .menu--right { left: auto; right: 0; }
+/* 账号面板（F17）比默认的 --menu-w(184) 宽一档：里面要横排六档主题，
+   184px 下六个中文标签会折成四行（实测截图）。这是**内容驱动**的宽度，
+   所以窄屏由 mobile.css 用 fixed + 左右留边覆盖掉，不靠这里的绝对值。 */
+.menu--account { min-width: 258px; }
 
 /* 打开：两种写法都支持 */
 .menu[data-open="true"],
@@ -729,6 +771,44 @@
   color: var(--muted);
 }
 .menu__status--error { color: var(--danger); }
+
+/* 面板头部：头像 + 用户名（+ 徽章）。F17 的账号面板用它当标题行，
+   它**不是** menu item（不进方向键序列，也不是可点动作）。 */
+.menu__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  margin-bottom: var(--sp-1);
+  border-bottom: var(--bw) solid var(--line-soft);
+}
+.menu__user {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-ctl);
+  font-weight: var(--fw-medium);
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 面板里的"区域"（F17 ②「外观」六档就放在这里）。
+   与 .menu__label / .menu__item 同族，但内容不是一个动作，所以没有 role=menuitem。
+   宽度交给 .menu（--menu-w 起，内容更宽就撑开），窄屏由 mobile.css 限到视口内。 */
+.menu__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3) var(--sp-3);
+}
+.menu__section .menu__label { padding: 0; }
+/* 六档分段控件在面板里占满一行，并允许换行（窄屏两行，不横向滚动） */
+.menu__section .seg {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
 
 /* --------------------------------------------------------------------------
    12) 【补】日期选择与日历  .datepicker / .calendar

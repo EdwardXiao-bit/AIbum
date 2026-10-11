@@ -252,11 +252,19 @@
      （.btn:focus-visible → 同样是 box-shadow 3px 向外），留白口径不变。 */
   padding-inline: max(var(--blur-pad), calc(var(--ring-w) + var(--ring-offset)));
 }
+/* 日期范围：**竖排**（缺陷清单 ⑦）。
+   ⑦ 的成因是横向空间不够：F9 之后侧栏内容宽 220px，两列各 104px，而日期框至少要
+   「左内边距 16 + 文本 + 右边留给日历按钮 40 + 边框 2」。原生 `type=date` 的「年/月/日」
+   实测 56.77px → 114.8px；F20 换成 `.datepicker` 后显示的是 ISO（`2026-09-12` 实测 77.02px）
+   → 135px 起。104 怎么排都装不下，所以这一行改成单列：每个日期框都拿到整栏 220px
+   （余量 85px），「日」不再被裁。窄屏抽屉本就单列，无需另写一档。 */
 .library__dates {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--sp-3);
 }
+/* 日期范围的就地报错（2.4）用的是设计系统的 .error-text（components.css §2），
+   放在这一行的下端、两端输入框同时标红 —— 不需要额外样式（`p` 的 margin 已在 base.css 归零）。 */
 .library__switch-row {
   display: flex;
   align-items: center;
@@ -639,7 +647,8 @@
   /* 批量条是 flex 行：参与排布的必须是**直接子元素**。上面的 flex 属性落在 .selectmenu 上，
      但它内部还有一层 .menu__wrap（inline-flex）也要跟着铺满，否则触发按钮只按内容宽度排。 */
   .library__batch .menu__wrap { flex: 1 1 auto; min-width: 0; }
-  .library__dates { grid-template-columns: minmax(0, 1fr); }
+  /* .library__dates 的窄屏适配已不需要：它在所有宽度都是单列（缺陷清单 ⑦，
+     见 library.css 里 .library__dates 的注释） */
   .library__upload-foot { gap: var(--sp-2); }
   .library__upload-foot .upload__zone { flex: 1 1 100%; }
   .library__upload-foot #upload { flex: 1 1 100%; }

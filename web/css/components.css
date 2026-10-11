@@ -917,6 +917,25 @@
 }
 .popover[data-open="true"] { display: block; }
 
+/* 【补】"漂浮"锚定：面板改成 position: fixed，坐标由使用方用 CSSOM 变量写进来。
+   为什么要这一档：`.popover` 默认是 absolute，放在**滚动容器**里会被裁 —— 绝对定位后代的
+   包含块在容器内部时，`overflow: auto` 会在它的 padding box 把面板剪掉。
+   F20 的日期选择器就在这种容器里（`.library__side-body` 是 overflow: auto，桌面栏内容才 220px，
+   而日历有 288×357），所以它打开时挂 `data-floating="true"`：
+     · 横向：窄屏/窄栏不会被剪，也不会顶破视口
+     · 纵向：357px 高的面板比侧栏可视区还高，靠 fixed + JS 夹取摆到能看全的位置
+   坐标只走 `--pop-x` / `--pop-y`（CSP §0A E5：动态样式只能 CSSOM，不许拼 style="..."）。
+   max-* 是最后一道保险：极窄/极矮的视口下面板自己收进视口内并内部滚动。 */
+.popover[data-floating="true"] {
+  position: fixed;
+  left: var(--pop-x, 0);
+  top: var(--pop-y, 0);
+  max-width: calc(100vw - 2 * var(--sp-2));
+  max-height: calc(100vh - 2 * var(--sp-2));
+  max-height: calc(100dvh - 2 * var(--sp-2));
+  overflow: auto;
+}
+
 .datepicker { position: relative; display: block; }
 .datepicker .input { padding-right: var(--sp-8); cursor: pointer; }
 .datepicker:has(.popover[data-open="true"]) .input {

@@ -8,6 +8,7 @@
        2.2  六个筛选维度 album_id · location · start · end · favorite · tags + order
        2.3  参数构造：先删这 6 个键再重设、空值不发、tags 重复 append（api.appendFilters）
        2.4  日期校验：开始 > 结束 → "开始日期不能晚于结束日期"
+            （F20 起改为**就地报错**：.error-text + 两端 input--invalid，非法的一对不写 store）
        2.5  标签上限 30（store.toggleTag 抛错 → guard 转通知条）
        2.6  标签搜索：小写包含匹配，无匹配显示"暂无匹配标签"
        2.7  结果文案 `${total} 张照片 · 已显示 ${n} 张`
@@ -71,6 +72,7 @@ import * as router from '../router.js';
 import * as store from '../store.js';
 import { h, setText } from '../components/dom.js';
 import { createSelectMenu } from '../components/select-menu.js';
+import { createDatePicker } from '../components/date-picker.js';
 import { createSpinner, createLoader } from '../components/spinner.js';
 import { createPhotoCard } from '../components/photo-card.js';
 import { createUploadQueue } from '../components/upload-queue.js';
@@ -263,8 +265,40 @@ export function createLibraryView(options = {}) {
     document: document_,
   });
   const locationFilter = h('input', { className: 'input', id: 'location-filter', type: 'search', placeholder: '例如：杭州', 'data-role': 'filter-location' });
-  const startFilter = h('input', { className: 'input', id: 'start-filter', type: 'date', 'data-role': 'filter-start' });
-  const endFilter = h('input', { className: 'input', id: 'end-filter', type: 'date', 'data-role': 'filter-end' });
+  /* 日期两个框：**设计系统的 .datepicker / .popover.calendar**（components/date-picker.js），
+     替换原来的原生 `<input type="date">`。用户反馈 ⑦（桌面侧栏「日」被裁）就是原生控件
+     在窄栏里的固有毛病：`年/月/日` 文本 + 内边距 + 右侧日历图标预留，104px 的格子装不下。
+     换掉之后：值是 ISO（与旧控件逐字同格式 → 请求参数/store/后端都不用动）、显示文本由我们
+     决定、日历按视口夹取摆放（窄屏不溢出）。
+     id 仍挂在**输入框**上：`<label for="start-filter">` 的关联、`nodes.startFilter`、
+     验收脚本的选择器都保持原样。 */
+  const startPicker = createDatePicker({
+    id: 'start-filter',
+    dataRole: 'filter-start',
+    document: document_,
+    placeholder: '选择日期',
+    popoverLabel: '选择开始日期',
+    toggleLabel: '打开开始日期日历',
+  });
+  const endPicker = createDatePicker({
+    id: 'end-filter',
+    dataRole: 'filter-end',
+    document: document_,
+    placeholder: '选择日期',
+    popoverLabel: '选择结束日期',
+    toggleLabel: '打开结束日期日历',
+  });
+  const startFilter = startPicker.input;
+  const endFilter = endPicker.input;
+  /* 2.4 的就地报错（本卡范围）：日期范围非法时**不写 store**（也就不发那次注定被后端 422 的请求），
+     改为把用户刚选的那一对显示出来 + 两端标红 + 一行 .error-text。
+     它是"一次性尝试的展示态"，不是第二份 store：store 里永远只有查得过的合法筛选，
+     一旦外部把日期改了（清空筛选 / 重置 / 换账户）它就被丢掉（见 renderDateRange）。 */
+  let dateError = null;   // { message, start, end, baseline: {start, end} }
+  const datesError = h('p', {
+    className: 'error-text', id: 'date-error', role: 'alert',
+    hidden: true, 'data-role': 'dates-error',
+  });
   const favoriteFilter = h('button', {
     className: 'switch', id: 'favorite-filter', type: 'button', role: 'switch', 'aria-checked': 'false',
     'data-role': 'filter-favorite', 'aria-label': '只看收藏',
@@ -317,9 +351,10 @@ export function createLibraryView(options = {}) {
         albumFilter.element,
       ]),
       h('div', { className: 'field' }, [h('label', { for: 'location-filter', text: '地点' }), locationFilter]),
-      h('div', { className: 'library__dates' }, [
-        h('div', { className: 'field' }, [h('label', { for: 'start-filter', text: '开始日期' }), startFilter]),
-        h('div', { className: 'field' }, [h('label', { for: 'end-filter', text: '结束日期' }), endFilter]),
+      h('div', { className: 'library__dates', 'data-role': 'dates' }, [
+        h('div', { className: 'field' }, [h('label', { for: 'start-filter', text: '开始日期' }), startPicker.element]),
+        h('div', { className: 'field' }, [h('label', { for: 'end-filter', text: '结束日期' }), endPicker.element]),
+        datesError,
       ]),
       h('div', { className: 'library__switch-row' }, [
         h('span', { className: 'label', id: 'favorite-label', text: '只看收藏' }),
@@ -560,6 +595,7 @@ export function createLibraryView(options = {}) {
     dropZone, searchButton, resetButton, strictRadios, modelHint, modelStatus,
     sidebar, sidebarToggle: filtersToggle, filtersToggle,
     albumFilter: albumFilter.element, locationFilter, startFilter, endFilter,
+    startPicker: startPicker.element, endPicker: endPicker.element, datesError,
     favoriteFilter, orderSelect: orderSelect.element, tagKeyword, tagCloud, clearTagsButton, clearFiltersButton,
     newAlbumButton, filterCount,
     resultLabel, searchSummary, selectAll, selectedCount, batchBar, batchFavorite, batchMove, batchDelete,
@@ -700,12 +736,45 @@ export function createLibraryView(options = {}) {
     }
   }
 
+  /**
+   * 日期两端的显示 + 2.4 的就地报错（本卡范围）。
+   * 正常情况：显示 store 里的 start/end（与旧实现逐字一致）。
+   * 拒绝态（dateError）：显示**用户刚选的那一对**并把两端标红 —— 设计系统的要求是
+   * "开始日期晚于结束日期时，两端都要标错"（styleguide §14 的说明），值也要留着，
+   * 否则用户看不到自己选了什么（原生控件那次是"值被回滚 + 一条通知条"，看不到因果）。
+   * dateError 会在**外部改了日期**（清空筛选 / 重置 / 换账户）时自动作废：
+   * 它记录的 baseline 与 store 现况不一致就说明这次尝试已经不成立了。
+   */
+  function renderDateRange(state = store.getState()) {
+    const filters = state.filters;
+    const storeStart = String(filters.start || '');
+    const storeEnd = String(filters.end || '');
+    if (dateError && (storeStart !== dateError.baseline.start || storeEnd !== dateError.baseline.end)) {
+      dateError = null;
+    }
+    const shown = dateError
+      ? { start: dateError.start, end: dateError.end }
+      : { start: storeStart, end: storeEnd };
+    if (startPicker.getValue() !== shown.start) startPicker.setValue(shown.start);
+    if (endPicker.getValue() !== shown.end) endPicker.setValue(shown.end);
+    // 两端都把"范围"告诉日历，才能把区间里的日格标成 data-in-range
+    startPicker.setRange(shown.start, shown.end);
+    endPicker.setRange(shown.start, shown.end);
+    const invalid = Boolean(dateError);
+    for (const node of [startFilter, endFilter]) {
+      node.classList.toggle('input--invalid', invalid);
+      if (invalid) node.setAttribute('aria-invalid', 'true');
+      else node.removeAttribute('aria-invalid');
+    }
+    if (invalid) setText(datesError, dateError.message);
+    datesError.hidden = !invalid;
+  }
+
   function renderFilters(state = store.getState()) {
     const filters = state.filters;
     if (albumFilter.getValue() !== (filters.album_id || '')) albumFilter.setValue(filters.album_id || '');
     if (locationFilter.value !== filters.location) locationFilter.value = filters.location || '';
-    if (startFilter.value !== (filters.start || '')) startFilter.value = filters.start || '';
-    if (endFilter.value !== (filters.end || '')) endFilter.value = filters.end || '';
+    renderDateRange(state);
     if (orderSelect.getValue() !== (filters.order || 'newest')) orderSelect.setValue(filters.order || 'newest');
     favoriteFilter.setAttribute('aria-checked', filters.favorite ? 'true' : 'false');
     renderTagCloud();
@@ -1390,8 +1459,44 @@ export function createLibraryView(options = {}) {
     delete locationFilter.dataset.dirty;
     await applyFilterChange(() => store.setFilter('location', locationFilter.value));
   }));
-  startFilter.addEventListener('change', store.guard(() => applyFilterChange(() => store.setFilter('start', startFilter.value))));
-  endFilter.addEventListener('change', store.guard(() => applyFilterChange(() => store.setFilter('end', endFilter.value))));
+  /* 2.4 日期：**先校验，再写 store**。
+     这与旧实现的区别只在"非法那一刻"：
+       旧：写进 store → fetchBrowse 抛错 → 回滚 + 通知条（用户看不到自己选了什么）
+       新：不写 store，把这一对留在界面上并就地标红（`.error-text` + `input--invalid`），
+           不发那次注定被后端 422 的请求，也不弹通知条 —— 字段级错误归字段。
+     合法时语义完全没变：仍是 store.setFilter('start') / store.setFilter('end')。
+     注意 `next` 取自**当前显示的一对**（拒绝态下它可能就是"越界那一对"）：
+     用户随后把另一端也改到合法区间里，这次会把两端一起落库，界面与 store 恰好一致。 */
+  async function applyDateChange(key, value) {
+    const displayed = { start: startPicker.getValue(), end: endPicker.getValue() };
+    const next = { ...displayed, [key]: value };
+    const error = validateDates(next);
+    if (error) {
+      const filters = store.getState().filters;
+      dateError = {
+        message: error,
+        start: next.start,
+        end: next.end,
+        baseline: { start: String(filters.start || ''), end: String(filters.end || '') },
+      };
+      renderDateRange();
+      return;
+    }
+    dateError = null;
+    const filters = store.getState().filters;
+    const writes = [];
+    if (String(filters.start || '') !== next.start) writes.push(['start', next.start]);
+    if (String(filters.end || '') !== next.end) writes.push(['end', next.end]);
+    if (!writes.length) {          // 同值闸：与 applyFilterValue 一致，不发多余请求
+      renderDateRange();
+      return;
+    }
+    await applyFilterChange(() => {
+      for (const [filterKey, filterValue] of writes) store.setFilter(filterKey, filterValue);
+    });
+  }
+  startPicker.onChange = store.guard(value => applyDateChange('start', value));
+  endPicker.onChange = store.guard(value => applyDateChange('end', value));
   favoriteFilter.addEventListener('click', store.guard(() => applyFilterChange(() => {
     store.setFilter('favorite', favoriteFilter.getAttribute('aria-checked') !== 'true');
   })));
@@ -1624,6 +1729,11 @@ export function createLibraryView(options = {}) {
     setDragOverlay(false);
     uploadInput.value = '';
     uploadDialog.setFiles([]);
+    // 日期日历（F20）：它是 fixed 浮层，开着的时候在 document 上挂了
+    // click / keydown / scroll / resize 监听。登出/换账户时必须先收起来，
+    // 否则监听会留在 document 上（闭包指向已脱离文档的节点）。
+    for (const picker of [startPicker, endPicker]) picker.close({ restoreFocus: false });
+    dateError = null;
     if (modals) {
       modals.close(dialog);
       modals.close(uploadDialogNode);
@@ -1687,6 +1797,8 @@ export function createLibraryView(options = {}) {
       // 卸载前必须把抽屉从浮层系统里摘干净：否则遮罩会留在屏幕上，
       // 而且 modals.current 会指向一个已被移除的节点（下一次 open 会去 close 它）。
       if (modals && modals.isOpen(sidebar)) modals.close(sidebar);
+      // 日历浮层同理：fixed 面板 + document 级监听都要跟着视图一起下台
+      for (const picker of [startPicker, endPicker]) picker.close({ restoreFocus: false });
       drawerHistory = false;
       clearModelHint();
       root.remove();
@@ -1708,6 +1820,8 @@ export function createLibraryView(options = {}) {
     setReference,
     clearReference,
     probe,
+    /** 日期控件的读写入口（验收脚本用：直接读值/程序化设值/开关日历，不必去点像素）。 */
+    datePickers: { start: startPicker, end: endPicker },
     // 上传（第 4 节）的对外入口：验收脚本用它读遥测、驱动重试、读队列快照
     uploader,
     uploadQueue,

@@ -5,8 +5,8 @@
 
    规矩（与 tokens / base / components / views 一致）：
      - **只引用令牌**，不写死颜色 / 圆角 / 阴影 / 间距 / 字号（F2 已定：硬编码色值 0）
-     - 组件长什么样由 css/components.css 决定（.table / .badge / .btn / .input / .select /
-       .dialog / .panel / .grid），本文件只负责"摆在哪、占多宽"
+     - 组件长什么样由 css/components.css 决定（.table / .badge / .btn / .input /
+       .selectmenu / .dialog / .panel / .grid），本文件只负责"摆在哪、占多宽"
      - 全部选择器收在 `.admin` 下，和 views/library.css、views/detail.css 一样，
        不往全局命名空间里再丢类（否则视图一多就会互相踩）
      - 禁止内联 style（app/main.py:180 的 CSP 无 unsafe-inline / unsafe-hashes）：
@@ -125,7 +125,8 @@
   max-width: 100%;
 }
 
-.admin__toolbar .select { width: auto; }
+/* 状态下拉（.selectmenu = .menu 的选择形态）：宽度按内容，别占满工具条 */
+.admin__toolbar .selectmenu { width: auto; }
 
 .admin__note {
   font-size: var(--fs-sm);
@@ -178,7 +179,7 @@
 @media (max-width: 900px) {
   .admin__head { align-items: flex-start; }
   .admin__toolbar .input { width: 100%; }
-  .admin__toolbar .select { width: 100%; }
+  .admin__toolbar .selectmenu { width: 100%; }
   .admin__confirm-text + .dialog__foot { flex-direction: column-reverse; }
   .admin__confirm-text + .dialog__foot .btn { width: 100%; }
 

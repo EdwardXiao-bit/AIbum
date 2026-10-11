@@ -167,9 +167,8 @@
   /* 照片卡四角元素的内缩 */
   --side-gap: 12px;
 
-  /* 下拉箭头（.select 自绘）与玻璃模糊半径 */
-  --sel-arrow: 5px;
-  --sel-gap: 13px;
+  /* 玻璃模糊半径（下拉箭头原属 .select，已随下拉改 .selectmenu 退场：
+     箭头现在是 .menu__caret 的文字字形，不需要尺寸令牌） */
   --blur-sm: 2px;
   --blur: 4px;
   --blur-lg: 14px;

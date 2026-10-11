@@ -40,6 +40,7 @@ import { api } from '../api.js';
 import * as router from '../router.js';
 import * as store from '../store.js';
 import { h } from '../components/dom.js';
+import { createSelectMenu } from '../components/select-menu.js';
 
 /** 标签分隔符：半角逗号 + 中文逗号（行为清单 6.8 / legacy L229）。 */
 export const TAG_SPLIT = /[,，]/;
@@ -247,9 +248,15 @@ export function createDetailView(options = {}) {
     className: 'input', id: 'detail-location', name: 'location', maxlength: '200',
     placeholder: '可手动填写', autocomplete: 'off',
   });
-  const albumSelect = h('select', { className: 'select', id: 'detail-album', name: 'album_id' }, [
-    h('option', { value: '', text: '未归入相册' }),
-  ]);
+  /* 所属相册：设计系统的 .menu 形态（原生 <select> 的展开弹层是系统画的，与风格割裂）。
+     读写入口是 getValue()/setValue()，`buildPatchBody` 的判据（6.7 / 6.8）逐字未动。 */
+  const albumSelect = createSelectMenu({
+    id: 'detail-album',
+    labelledBy: 'detail-album-label',
+    label: '所属相册',
+    options: [{ value: '', label: '未归入相册' }],
+    document: document_,
+  });
   const tagsInput = h('input', {
     className: 'input', id: 'detail-tags', name: 'tags', placeholder: '旅行, 海边', autocomplete: 'off',
   });
@@ -265,7 +272,10 @@ export function createDetailView(options = {}) {
       figure,
       h('div', { className: 'field' }, [h('label', { for: 'detail-name', text: '照片名称' }), nameInput]),
       h('div', { className: 'field' }, [h('label', { for: 'detail-location', text: '地点' }), locationInput]),
-      h('div', { className: 'field' }, [h('label', { for: 'detail-album', text: '所属相册' }), albumSelect]),
+      h('div', { className: 'field' }, [
+        h('span', { className: 'label', id: 'detail-album-label', text: '所属相册' }),
+        albumSelect.element,
+      ]),
       h('div', { className: 'field' }, [
         h('label', { for: 'detail-tags', text: '标签（用逗号分隔）' }),
         tagsInput,
@@ -310,7 +320,7 @@ export function createDetailView(options = {}) {
 
   const nodes = {
     element, form, head, meta, title, image, imageNote, nameInput, locationInput,
-    albumSelect, tagsInput, favoriteSwitch, autoText, stateText,
+    albumSelect: albumSelect.element, tagsInput, favoriteSwitch, autoText, stateText,
     saveButton: form.querySelector('[data-role="save"]'),
     similarButton, retryButton, downloadLink, closeButton,
   };
@@ -319,17 +329,16 @@ export function createDetailView(options = {}) {
      2) 渲染
      ====================================================================== */
 
-  /** 7.2 相册下拉：显示 `名称 (数量)`，保留当前选中值（仍在列表里才保留）。 */
+  /** 7.2 相册下拉：显示 `名称 (数量)`，保留当前选中值（仍在列表里才保留）。
+   *  换用 .menu 形态后 `setOptions(..., {keepValue})` 就是这条语义（不在列表里 → 归零）。 */
   function fillAlbums(albums, selected) {
-    albumSelect.replaceChildren(
-      h('option', { value: '', text: '未归入相册' }),
-      ...(albums || []).map(item => h('option', {
+    albumSelect.setOptions([
+      { value: '', label: '未归入相册' },
+      ...(albums || []).map(item => ({
         value: item.id,
-        text: `${item.name} (${item.count === undefined ? 0 : item.count})`,
+        label: `${item.name} (${item.count === undefined ? 0 : item.count})`,
       })),
-    );
-    const keep = selected && [...albumSelect.options].some(option => option.value === selected);
-    albumSelect.value = keep ? selected : '';
+    ], { keepValue: selected === undefined || selected === null ? '' : String(selected) });
   }
 
   /** 把一张照片填进界面（6.2 / 6.3 / 6.4 / 6.5 / 6.6 + 各字段初值）。 */
@@ -552,7 +561,7 @@ export function createDetailView(options = {}) {
     const body = buildPatchBody(current, {
       name: nameInput.value,
       location: locationInput.value,
-      album_id: albumSelect.value,
+      album_id: albumSelect.getValue(),
       favorite: favoriteSwitch.getAttribute('aria-checked') === 'true',
       tagText: tagsInput.value,
     });

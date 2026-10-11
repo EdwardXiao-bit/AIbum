@@ -162,9 +162,9 @@ code, kbd, samp, pre {
   outline-offset: var(--ring-offset);
 }
 
-/* 表单控件自己有 border-color + box-shadow 的强调，避免双环 */
+/* 表单控件自己有 border-color + box-shadow 的强调，避免双环
+   （`.select` 已随 5 处下拉 → `.selectmenu` 退场，列表里不再有它） */
 .input:focus-visible,
-.select:focus-visible,
 .textarea:focus-visible {
   outline: none;
 }

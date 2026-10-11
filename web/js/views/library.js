@@ -70,6 +70,7 @@ import { api } from '../api.js';
 import * as router from '../router.js';
 import * as store from '../store.js';
 import { h, setText } from '../components/dom.js';
+import { createSelectMenu } from '../components/select-menu.js';
 import { createPhotoCard } from '../components/photo-card.js';
 import { createUploadQueue } from '../components/upload-queue.js';
 import { createUploadDialog, createUploader } from './upload.js';
@@ -237,7 +238,16 @@ export function createLibraryView(options = {}) {
 
   /* ---------------- 筛选栏（侧栏；标签是标签云：已选优先 + 频次排序） ---------------- */
 
-  const albumFilter = h('select', { className: 'select', id: 'album-filter', 'data-role': 'filter-album' });
+  /* 相册 / 排序两处下拉：**设计系统的 .menu 形态**（components/select-menu.js），
+     替换原来的原生 <select>（用户反馈：展开的系统弹层是蓝底方角，与应用风格割裂）。
+     id 与 data-role 与旧 DOM 保持一致，既有验收脚本的选择器仍然可用。 */
+  const albumFilter = createSelectMenu({
+    id: 'album-filter',
+    dataRole: 'filter-album',
+    labelledBy: 'album-filter-label',
+    options: [{ value: '', label: '所有相册' }],
+    document: document_,
+  });
   const locationFilter = h('input', { className: 'input', id: 'location-filter', type: 'search', placeholder: '例如：杭州', 'data-role': 'filter-location' });
   const startFilter = h('input', { className: 'input', id: 'start-filter', type: 'date', 'data-role': 'filter-start' });
   const endFilter = h('input', { className: 'input', id: 'end-filter', type: 'date', 'data-role': 'filter-end' });
@@ -245,10 +255,17 @@ export function createLibraryView(options = {}) {
     className: 'switch', id: 'favorite-filter', type: 'button', role: 'switch', 'aria-checked': 'false',
     'data-role': 'filter-favorite', 'aria-label': '只看收藏',
   });
-  const orderSelect = h('select', { className: 'select', id: 'order', 'data-role': 'filter-order' }, [
-    h('option', { value: 'newest', text: store.ORDER_LABELS.newest }),
-    h('option', { value: 'oldest', text: store.ORDER_LABELS.oldest }),
-  ]);
+  const orderSelect = createSelectMenu({
+    id: 'order',
+    dataRole: 'filter-order',
+    labelledBy: 'order-label',
+    options: [
+      { value: 'newest', label: store.ORDER_LABELS.newest },
+      { value: 'oldest', label: store.ORDER_LABELS.oldest },
+    ],
+    value: 'newest',
+    document: document_,
+  });
   const tagKeyword = h('input', {
     className: 'input', id: 'tag-keyword', type: 'search', placeholder: '筛选标签…', 'data-role': 'tag-keyword',
     'aria-label': '按关键字筛选标签',
@@ -281,7 +298,10 @@ export function createLibraryView(options = {}) {
       sideClose,
     ]),
     h('div', { className: 'library__side-body' }, [
-      h('div', { className: 'field' }, [h('label', { for: 'album-filter', text: '相册' }), albumFilter]),
+      h('div', { className: 'field' }, [
+        h('span', { className: 'label', id: 'album-filter-label', text: '相册' }),
+        albumFilter.element,
+      ]),
       h('div', { className: 'field' }, [h('label', { for: 'location-filter', text: '地点' }), locationFilter]),
       h('div', { className: 'library__dates' }, [
         h('div', { className: 'field' }, [h('label', { for: 'start-filter', text: '开始日期' }), startFilter]),
@@ -291,7 +311,10 @@ export function createLibraryView(options = {}) {
         h('span', { className: 'label', id: 'favorite-label', text: '只看收藏' }),
         favoriteFilter,
       ]),
-      h('div', { className: 'field' }, [h('label', { for: 'order', text: '排序' }), orderSelect]),
+      h('div', { className: 'field' }, [
+        h('span', { className: 'label', id: 'order-label', text: '排序' }),
+        orderSelect.element,
+      ]),
       h('div', { className: 'field' }, [
         h('div', { className: 'library__tag-head' }, [
           h('label', { for: 'tag-keyword', text: '标签' }),
@@ -317,13 +340,23 @@ export function createLibraryView(options = {}) {
     'aria-checked': 'false', 'aria-label': '全选当前已加载的照片', 'data-role': 'select-all',
   }, [h('span', { className: 'photo__sel-mark', 'aria-hidden': 'true', text: '✓' })]);
 
-  const batchAlbum = h('select', { className: 'select select--sm', id: 'batch-album', 'data-role': 'batch-album' });
+  /* 批量移动的相册下拉：同样是 .menu 形态（第三处）。它是**动作参数**，不是筛选条件：
+     选中后不自动执行，等用户点「移动」——与旧 <select> 的语义逐字一致（5.7）。 */
+  const batchAlbum = createSelectMenu({
+    id: 'batch-album',
+    dataRole: 'batch-album',
+    label: '移动到相册',
+    className: 'selectmenu--sm',
+    triggerClass: 'selectmenu__trigger--sm',
+    options: [{ value: '', label: '移出相册' }],
+    document: document_,
+  });
   const batchFavorite = h('button', { className: 'btn btn--sm', id: 'batch-favorite', type: 'button', text: '收藏', disabled: true });
   const batchMove = h('button', { className: 'btn btn--sm', id: 'batch-move', type: 'button', text: '移动', disabled: true });
   const batchDelete = h('button', { className: 'btn btn--sm btn--danger', id: 'batch-delete', type: 'button', text: '删除', disabled: true });
 
   const batchBar = h('div', { className: 'library__batch', 'data-role': 'batch-bar' }, [
-    selectAll, selectedCount, batchFavorite, batchMove, batchAlbum, batchDelete,
+    selectAll, selectedCount, batchFavorite, batchMove, batchAlbum.element, batchDelete,
   ]);
 
   const grid = h('div', { className: 'photo-grid library__grid', id: 'grid', 'data-role': 'grid' });
@@ -502,12 +535,18 @@ export function createLibraryView(options = {}) {
   // 不在 DOM 里留孤儿对话框。.dialog 是 position:fixed，挂在哪儿都不影响布局。
   root.append(dialog, uploadDialogNode);
 
+  // albumFilter / orderSelect / batchAlbum 暴露的是**视图节点**（.selectmenu 的最外层），
+  // 与其它 nodes.* 的语义一致；选择器的读写入口（getValue/setValue）在 uploader 那类对象上，
+  // 验收脚本直接用 document.querySelector('#album-filter') 即可。
   const nodes = {
     root, hero, searchForm, searchInput, referenceInput, referencePreview, referenceName, referenceInfo,
     dropZone, searchButton, resetButton, strictRadios, modelHint, modelStatus,
-    sidebar, sidebarToggle: filtersToggle, filtersToggle, albumFilter, locationFilter, startFilter, endFilter,
-    favoriteFilter, orderSelect, tagKeyword, tagCloud, clearTagsButton, clearFiltersButton, newAlbumButton, filterCount,
-    resultLabel, searchSummary, selectAll, selectedCount, batchBar, batchFavorite, batchMove, batchDelete, batchAlbum,
+    sidebar, sidebarToggle: filtersToggle, filtersToggle,
+    albumFilter: albumFilter.element, locationFilter, startFilter, endFilter,
+    favoriteFilter, orderSelect: orderSelect.element, tagKeyword, tagCloud, clearTagsButton, clearFiltersButton,
+    newAlbumButton, filterCount,
+    resultLabel, searchSummary, selectAll, selectedCount, batchBar, batchFavorite, batchMove, batchDelete,
+    batchAlbum: batchAlbum.element,
     grid, emptyNode, emptyTitle, emptyDesc, loadMore,
     // 上传（第 4 节）：投递区 / 文件输入 / 队列表 / 队列面板 / 全页拖放遮罩 / 选相册对话框
     uploadButton, uploadInput, uploadZone, uploadPanel, uploadQueue, uploader,
@@ -646,11 +685,11 @@ export function createLibraryView(options = {}) {
 
   function renderFilters(state = store.getState()) {
     const filters = state.filters;
-    if (albumFilter.value !== filters.album_id) albumFilter.value = filters.album_id || '';
+    if (albumFilter.getValue() !== (filters.album_id || '')) albumFilter.setValue(filters.album_id || '');
     if (locationFilter.value !== filters.location) locationFilter.value = filters.location || '';
     if (startFilter.value !== (filters.start || '')) startFilter.value = filters.start || '';
     if (endFilter.value !== (filters.end || '')) endFilter.value = filters.end || '';
-    if (orderSelect.value !== filters.order) orderSelect.value = filters.order || 'newest';
+    if (orderSelect.getValue() !== (filters.order || 'newest')) orderSelect.setValue(filters.order || 'newest');
     favoriteFilter.setAttribute('aria-checked', filters.favorite ? 'true' : 'false');
     renderTagCloud();
     const active = [
@@ -915,7 +954,7 @@ export function createLibraryView(options = {}) {
     }
   }
 
-  /** 把筛选恢复成 before（逐个走 setFilter，DOM 也会跟着同步回来）。 */
+  /** 把筛选恢复成 before（逐个走 setFilter，两个 .menu 下拉也要拨回去）。 */
   function restoreFilters(before) {
     for (const key of store.FILTER_KEYS.concat('order')) {
       const value = key === 'tags' ? [] : before[key];
@@ -923,6 +962,11 @@ export function createLibraryView(options = {}) {
       else store.setFilter(key, value);
     }
     for (const tag of before.tags || []) store.toggleTag(tag, true);
+    /* 下拉的**控件值**要显式对齐：renderFilters 只在"控件值 ≠ store 值"时才 setValue，
+       而回滚的场景（日期非法 / 标签超限）里控件值恰恰已经等于那个非法值，
+       不拨回去就会停在一个 store 里并不存在的选项上。 */
+    albumFilter.setValue(store.getState().filters.album_id || '');
+    orderSelect.setValue(store.getState().filters.order || 'newest');
     return store.getState().filters;
   }
 
@@ -949,17 +993,22 @@ export function createLibraryView(options = {}) {
      5) 选项加载（7.1 / 7.2 / 7.3）
      ====================================================================== */
 
-  function fillAlbumSelect(node, entries, firstLabel, keepValue) {
-    const previous = keepValue === undefined ? node.value : keepValue;
-    node.replaceChildren(
-      h('option', { value: '', text: firstLabel }),
-      ...entries.map(album => h('option', {
+  /**
+   * 7.2 填充一个下拉选择（原 `fillAlbumSelect`，语义逐字保留）：
+   * 首项是第一项文案，其余是 `名称 (数量)`；**保留当前选中值**（若仍存在）。
+   * 现在走 components/select-menu.js：`setOptions(list, {keepValue})` 就是这条语义
+   * （期望值不在新列表里 → 归零）。
+   */
+  function fillAlbumSelect(control, entries, firstLabel, keepValue) {
+    const previous = keepValue === undefined ? control.getValue() : keepValue;
+    control.setOptions([
+      { value: '', label: firstLabel },
+      ...entries.map(album => ({
         value: album.id,
-        text: `${album.name} (${album.count !== undefined ? album.count : 0})`,
+        label: `${album.name} (${album.count !== undefined ? album.count : 0})`,
       })),
-    );
-    if ([...node.options].some(option => option.value === previous)) node.value = previous;
-    return node;
+    ], { keepValue: previous === undefined || previous === null ? '' : String(previous) });
+    return control;
   }
 
   function renderAlbumOptions() {
@@ -1082,7 +1131,7 @@ export function createLibraryView(options = {}) {
    */
   function openUploadDialog(files) {
     pendingFiles = [...(files || [])];
-    uploadDialog.select.value = '';
+    uploadDialog.select.setValue('');   // 每次打开都回到「未归入相册」（Q2 的默认值）
     uploadDialog.setFiles(pendingFiles);
     if (modals) modals.open(uploadDialogNode);
   }
@@ -1286,8 +1335,28 @@ export function createLibraryView(options = {}) {
     await applyFilterChange(() => store.setTags([]));
   }));
 
-  /** 2.2 六个筛选维度 + 排序 */
-  albumFilter.addEventListener('change', store.guard(() => applyFilterChange(() => store.setFilter('album_id', albumFilter.value))));
+  /** 2.2 六个筛选维度 + 排序。
+   *  两处下拉从原生 <select> 换成 .menu 后，"值变了"这件事由控件回调（onChange）告知，
+   *  payload 里带的是**新的值本身**，不再从控件读回。
+   *
+   *  为什么不用 `trigger` 上的 change 事件：那一刻控件内部的值**已经**是新值了，
+   *  而 applyFilterChange 失败时（如日期非法）store 会回滚、renderFilters 又因为
+   *  "控件值已是新值"而跳过对齐 —— 控件就会停在一个 store 里并不存在的值上。
+   *  用 onChange 的 payload + 失败时 rollbackValue() 把控件也拨回去，两边永远一致。
+   *
+   *  另加一道**同值闸**：当前 store 里已经是要设的值就什么都不做。原生 change 只在
+   *  值真变了才触发，而 menuitemradio 是普通按钮；没有这道闸，重放检索时会白发一次
+   *  multipart 检索（`store.setFilter` 也会白白 emit 一轮渲染）。 */
+  function applyFilterValue(key, next, rollbackValue) {
+    if (String(store.getState().filters[key] || '') === String(next || '')) return Promise.resolve();
+    return applyFilterChange(() => store.setFilter(key, next)).catch(error => {
+      if (typeof rollbackValue === 'function') rollbackValue();
+      throw error;
+    });
+  }
+
+  albumFilter.onChange = store.guard(value =>
+    applyFilterValue('album_id', value, () => albumFilter.setValue(store.getState().filters.album_id || '')));
   locationFilter.addEventListener('input', () => { locationFilter.dataset.dirty = 'true'; });
   locationFilter.addEventListener('change', store.guard(() => applyFilterChange(() => store.setFilter('location', locationFilter.value))));
   locationFilter.addEventListener('keydown', store.guard(async event => {
@@ -1301,7 +1370,8 @@ export function createLibraryView(options = {}) {
   favoriteFilter.addEventListener('click', store.guard(() => applyFilterChange(() => {
     store.setFilter('favorite', favoriteFilter.getAttribute('aria-checked') !== 'true');
   })));
-  orderSelect.addEventListener('change', store.guard(() => applyFilterChange(() => store.setFilter('order', orderSelect.value))));
+  orderSelect.onChange = store.guard(value =>
+    applyFilterValue('order', value, () => orderSelect.setValue(store.getState().filters.order || 'newest')));
   tagKeyword.addEventListener('input', () => renderTagCloud());
 
   /** 2.8 加载更多 */
@@ -1400,7 +1470,7 @@ export function createLibraryView(options = {}) {
 
   /** 5.6 / 5.7 / 5.8 */
   batchFavorite.addEventListener('click', store.guard(() => batch('PATCH', { favorite: true })));
-  batchMove.addEventListener('click', store.guard(() => batch('PATCH', { album_id: batchAlbum.value || null })));
+  batchMove.addEventListener('click', store.guard(() => batch('PATCH', { album_id: batchAlbum.getValue() || null })));
   batchDelete.addEventListener('click', store.guard(() => batch('DELETE')));
 
   /** 7.4 新建相册（用模态框，不用 prompt；阶段 4.2） */

@@ -145,9 +145,11 @@
     height: var(--touch);
   }
 
-  /* --- 详情里的收藏开关、表单控件 --- */
-  .input,
-  .select { min-height: var(--touch); }
+  /* --- 详情里的收藏开关、表单控件、下拉选择的条目 ---
+     `.select` 已随 5 处原生 <select> → `.menu` 一起退场（全仓再无 .select 元素），
+     这里改成：输入框照旧撑到 44，下拉的**条目**也要够手指（触发按钮走上面的 .btn）。 */
+  .input { min-height: var(--touch); }
+  .selectmenu__menu .menu__item { min-height: var(--touch); }
 
   /* --- F17 ② 账号面板里的外观六档：.seg 只改了横向内边距，
          窄屏下按钮高度会落在 ~24px，够不着手指尺寸 --- */

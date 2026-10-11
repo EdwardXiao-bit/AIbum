@@ -16,7 +16,7 @@
    目录：
      0  焦点环与动效兜底
      1  按钮 .btn / 加载点 .spinner
-     2  表单 .field .input .select .textarea .search
+     2  表单 .field .input .textarea .search
      3  芯片与标签列表 .chip .taglist
      4  开关 .switch
      5  分段控件 .seg
@@ -25,7 +25,7 @@
      8  表格 .table
      9  空态 .empty / 骨架 .skel / 分隔 .divider
      10 浮层：遮罩 .scrim / 对话框 .dialog / 抽屉 .drawer / 提示条 .toast
-     11 【补】下拉菜单 .menu
+     11 【补】下拉菜单 .menu（含 11b 下拉选择 .selectmenu）
      12 【补】日期选择与日历 .datepicker .calendar
      13 【补】加载器与无限滚动触发器 .loader .loadmore
      14 【补】上传区与上传队列 .upload .queue
@@ -39,7 +39,6 @@
    -------------------------------------------------------------------------- */
 .btn:focus-visible,
 .input:focus-visible,
-.select:focus-visible,
 .textarea:focus-visible,
 .chip:focus-visible,
 .switch:focus-visible,
@@ -167,7 +166,12 @@
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* --------------------------------------------------------------------------
-   2) 表单  .field / .input / .select / .textarea
+   2) 表单  .field / .input / .textarea
+   --------------------------------------------------------------------------
+   原生 `<select>` 的 `.select` 已随「5 处下拉 → .menu」一起退场（全仓再无 .select
+   元素，包括 .select--sm / .select:focus 的覆盖与 tokens 里的 --sel-arrow/--sel-gap）。
+   不要用 `<select>` 加回控制类：展开的系统弹层改不动，正是用户反馈的那个问题；
+   下拉一律走 §11b 的 `.selectmenu`（js/components/select-menu.js）。
    -------------------------------------------------------------------------- */
 .field { display: flex; flex-direction: column; gap: var(--sp-2); }
 .field > label,
@@ -178,7 +182,7 @@
 }
 .hint { font-size: var(--fs-xs); color: var(--faint); }
 
-.input, .select, .textarea {
+.input, .textarea {
   height: var(--input-h);
   width: 100%;
   padding: 0 var(--sp-4);
@@ -198,13 +202,13 @@
   resize: vertical;
 }
 .input::placeholder, .textarea::placeholder { color: var(--faint); }
-.input:hover, .select:hover, .textarea:hover { border-color: var(--faint); }
-.input:focus, .select:focus, .textarea:focus {
+.input:hover, .textarea:hover { border-color: var(--faint); }
+.input:focus, .textarea:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 var(--ring-w) var(--ring);
 }
-.input[disabled], .select[disabled], .textarea[disabled],
+.input[disabled], .textarea[disabled],
 .input[aria-disabled="true"] {
   background: var(--sunken);
   color: var(--faint);
@@ -225,15 +229,6 @@
   display: flex;
   align-items: center;
   gap: var(--sp-1);
-}
-.select {
-  appearance: none;
-  padding-right: var(--sp-7);
-  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
-                    linear-gradient(135deg, currentColor 50%, transparent 50%);
-  background-position: right calc(var(--sel-gap) + var(--sel-arrow)) center, right var(--sel-gap) center;
-  background-size: var(--sel-arrow) var(--sel-arrow), var(--sel-arrow) var(--sel-arrow);
-  background-repeat: no-repeat;
 }
 .check { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-base); cursor: pointer; }
 
@@ -672,6 +667,26 @@
    aria-expanded="false" 时 .menu 不可见；触发按钮的旋转箭头用 .menu__caret。
    -------------------------------------------------------------------------- */
 .menu__wrap { position: relative; display: inline-flex; }
+
+/* --------------------------------------------------------------------------
+   11b) 【补】下拉选择 .selectmenu（.menu 的"选择器"形态）
+   --------------------------------------------------------------------------
+   原生 <select> 的替代形态，DOM 由 js/components/select-menu.js 生成：
+     .selectmenu > .menu__wrap > [.btn.selectmenu__trigger + .menu.selectmenu__menu]
+   与 .select 的关系：.select 只能改"收起状态"的外观，展开的系统弹层改不动
+   （用户反馈的"风格不统一"就是这个）；本类把两侧都交给设计系统。
+   外层 .selectmenu 是给视图挂宽度用的钩子（.btn 自带 inline-flex 与 --ctl-h），
+   内部一律复用 .menu / .menu__item / .menu__mark，不另造一套条目样式。
+   -------------------------------------------------------------------------- */
+.selectmenu { display: inline-flex; }
+.selectmenu > .menu__wrap { width: 100%; }
+/* 触发按钮：左对齐（下拉的常态，.btn 默认居中会让选项文字跳动）+ 文字过长省略 */
+.selectmenu__trigger { width: 100%; justify-content: flex-start; }
+.selectmenu__trigger[disabled] { cursor: not-allowed; }
+.selectmenu__label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* 菜单的 min-width 默认是 --menu-w(184)：窄屏下要能被视口夹住（与账号面板同一条
+   思路，但这里更宽——390 视口减两侧 --sp-3 仍有 366 > 184，所以只是兜底）。 */
+.selectmenu__menu { min-width: min(var(--menu-w), calc(100vw - var(--sp-6))); }
 
 .menu__caret {
   transition: transform var(--dur) var(--ease);

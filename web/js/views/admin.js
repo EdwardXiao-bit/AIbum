@@ -41,6 +41,7 @@
 import { api } from '../api.js';
 import * as store from '../store.js';
 import { h, setText } from '../components/dom.js';
+import { createSelectMenu } from '../components/select-menu.js';
 
 /* --------------------------------------------------------------------------
    1) 文案与常量（逐字对齐 legacy/index.html L43-47 与 legacy/app.js L265-292）
@@ -234,16 +235,21 @@ export function createAdminView(options = {}) {
     placeholder: ADMIN_COPY.searchPlaceholder, 'aria-label': ADMIN_COPY.searchLabel,
     'data-role': 'admin-search',
   });
-  const statusFilter = h('select', {
-    className: 'select', id: 'admin-status-filter', 'aria-label': ADMIN_COPY.statusLabel,
-    'data-role': 'admin-status-filter',
-  }, STATUS_FILTERS.map(item => h('option', { value: item.value, text: item.label })));
+  /* 8.7 状态筛选：设计系统的 .menu 形态（原生 <select> 的展开弹层是系统画的）。
+     value 仍是 legacy 的 'all' / 'active' / 'disabled'，DOM id 不变。 */
+  const statusFilter = createSelectMenu({
+    id: 'admin-status-filter',
+    label: ADMIN_COPY.statusLabel,
+    dataRole: 'admin-status-filter',
+    options: STATUS_FILTERS.map(item => ({ value: item.value, label: item.label })),
+    value: 'all',
+    document: options.document || document,
+  });
 
   const refreshButton = h('button', {
     className: 'btn', id: 'admin-refresh', type: 'button',
     'data-role': 'admin-refresh', text: ADMIN_COPY.refresh,
   });
-
   /* ---------------- 8.6 用户表 ---------------- */
 
   const tbody = h('tbody', { id: 'admin-users', 'data-role': 'admin-users' });
@@ -304,7 +310,7 @@ export function createAdminView(options = {}) {
       h('div', { className: 'admin__toolbar' }, [
         h('h2', { className: 'admin__users-title', text: ADMIN_COPY.usersHead }),
         search,
-        statusFilter,
+        statusFilter.element,
       ]),
       h('p', { className: 'admin__note', text: ADMIN_COPY.note }),
       h('div', { className: 'admin__table-scroll' }, [table]),
@@ -314,7 +320,7 @@ export function createAdminView(options = {}) {
   ]);
 
   const nodes = {
-    root, refreshButton, search, statusFilter, tbody, table, emptyNode,
+    root, refreshButton, search, statusFilter: statusFilter.element, tbody, table, emptyNode,
     modelStatus, storage, confirmDialog, confirmForm, confirmMessage,
     statValues: Object.fromEntries(statKeys.map(key => [key, statNodes[key].value])),
   };
@@ -423,7 +429,7 @@ export function createAdminView(options = {}) {
 
   /** 8.6 / 8.7：按当前筛选重画表体。筛选是**纯前端**的 —— 不发请求（legacy L273-274）。 */
   function render() {
-    const rows = filterUsers(store.getState().users, search.value, statusFilter.value);
+    const rows = filterUsers(store.getState().users, search.value, statusFilter.getValue());
     tbody.replaceChildren(...rows.map(buildRow));
     // legacy L275：没有符合条件的用户时才显示空态。
     // 「加载中」与「一次都没成功过」不显示 —— 否则首屏会先说一句"没有符合条件的用户"再变成有。
@@ -435,7 +441,7 @@ export function createAdminView(options = {}) {
   /** 登出 / 账户切换后把本视图的本地状态清干净（行为清单 1.5 的"彻底清空"）。 */
   function resetLocal() {
     search.value = '';
-    statusFilter.value = 'all';
+    statusFilter.setValue('all');
     lastError = null;
     loading = false;
     loadedOnce = false;
@@ -500,7 +506,10 @@ export function createAdminView(options = {}) {
   /* ---------------- 8.7 事件 ---------------- */
 
   search.addEventListener('input', () => render());
-  statusFilter.addEventListener('change', () => render());
+  /* 8.7 状态筛选变了就重画表体（纯前端过滤，不发请求）。用控件回调而不是 change 事件：
+     8.7 只需要"值变了"这一个事实，而 render() 读的是 getValue()，两种接法等价，
+     回调更直接（change 事件的派发点是 trigger，不冒泡，容易接错层）。 */
+  statusFilter.onChange = () => render();
   refreshButton.addEventListener('click', store.guard(async () => { await load(); }));
 
   /* ---------------- 生命周期 ---------------- */
@@ -534,7 +543,7 @@ export function createAdminView(options = {}) {
     confirmDisable,
     resetLocal,
     /** 验收探针：当前筛选后的行（直接给数据，不依赖 DOM 结构）。 */
-    filtered: () => filterUsers(store.getState().users, search.value, statusFilter.value),
+    filtered: () => filterUsers(store.getState().users, search.value, statusFilter.getValue()),
     /** 验收探针：一行用户表该显示的 5 个单元格文本。 */
     rowTexts: user => [userLabel(user), createdDate(user.created_at), quotaLabel(user.photo_count), stateLabel(user.active), user.is_admin ? ADMIN_COPY.dash : actionLabel(user.active)],
     get lastError() { return lastError; },

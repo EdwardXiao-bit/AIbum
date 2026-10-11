@@ -37,6 +37,7 @@
 import { ApiError, api } from '../api.js';
 import * as store from '../store.js';
 import { h, setText } from '../components/dom.js';
+import { createSelectMenu } from '../components/select-menu.js';
 
 /** 单张图片上限（行为清单 4.4 / §11）。store / library 里同名常量的**唯一出处**是 store.js。 */
 export const MAX_UPLOAD_BYTES = store.MAX_UPLOAD_BYTES;
@@ -101,6 +102,11 @@ export function completionNotice(result) {
 /**
  * 建"上传到哪个相册"对话框的内容（复用外壳的共享遮罩：components/modal.js）。
  * 返回 {form, select, summary, files, setFiles}；表单 submit = 确认上传。
+ *
+ * `select` 是 **components/select-menu.js 的下拉选择**（设计系统的 .menu 形态，
+ * 与筛选栏/批量移动/详情所属相册同一套控件），不是原生 `<select>`：
+ * 用户反馈的"三套下拉风格不统一"里，这一处也是原生弹层。
+ * 它保留了 `getValue()/setValue()/setOptions()`，调用方（library.js）照旧填相册列表。
  * @param {{albums: Array<{id:string,name:string,count?:number}>, document?: Document,
  *          onConfirm: (albumId: string|null, files: File[]) => any, onCancel?: () => any}} options
  */
@@ -110,19 +116,25 @@ export function createUploadDialog(options) {
 
   const summary = h('p', { className: 'upload-dialog__summary', 'data-role': 'upload-dialog-summary' });
   const sizeNote = h('p', { className: 'code-hint', 'data-role': 'upload-dialog-hint' });
-  const select = h('select', { className: 'select', id: 'upload-album', 'data-role': 'upload-target-album' }, [
-    h('option', { value: '', text: '未归入相册' }),
-    ...albums.map(album => h('option', {
-      value: album.id,
-      text: `${album.name} (${album.count !== undefined ? album.count : 0})`,
-    })),
-  ]);
+  const select = createSelectMenu({
+    id: 'upload-album',
+    dataRole: 'upload-target-album',
+    labelledBy: 'upload-album-label',
+    options: [
+      { value: '', label: '未归入相册' },
+      ...albums.map(album => ({
+        value: album.id,
+        label: `${album.name} (${album.count !== undefined ? album.count : 0})`,
+      })),
+    ],
+    document: document_,
+  });
   const submit = h('button', { className: 'btn btn--primary', type: 'submit', 'data-role': 'upload-confirm', text: '开始上传' });
   const form = h('form', { className: 'stack', id: 'upload-form', 'data-role': 'upload-form' }, [
     summary,
     h('div', { className: 'field' }, [
-      h('label', { for: 'upload-album', text: '归入相册' }),
-      select,
+      h('span', { className: 'label', id: 'upload-album-label', text: '归入相册' }),
+      select.element,
     ]),
     sizeNote,
     h('div', { className: 'dialog__foot' }, [
@@ -151,7 +163,7 @@ export function createUploadDialog(options) {
   form.addEventListener('submit', event => {
     event.preventDefault();
     if (!files.length) return;
-    const albumId = select.value || null;
+    const albumId = select.getValue() || null;
     options.onConfirm(albumId, files);
   });
 

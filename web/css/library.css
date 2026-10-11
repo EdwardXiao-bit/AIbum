@@ -244,10 +244,13 @@
   overflow: auto;
   /* F9 ⑥（真 bug，清单 ⑥）：原来 padding-left: 0 / padding-right: var(--blur-pad)=3px。
      overflow: auto 会在**padding box** 边界裁切，而焦点环是向外画的
-     （.select:focus 的 box-shadow 0 0 0 3px → 向外 3px；.chip 之类走 :focus-visible 的
-     outline 3px + offset 2px → 向外 5px）。左边缘与裁切边齐平 → 环整条被裁掉一半。
-     实测（改前）：slack 左 0 / 右 3，环向外 3px → 左侧裁掉 3px、右侧刚好贴边。
-     左右各留 max(--blur-pad, 环向外的宽度)：既修好裁切，又不吃掉滚动条轨道留白。 */
+     （.input/.selectmenu__trigger 走 box-shadow 0 0 0 3px → 向外 3px；
+     .chip 之类走 :focus-visible 的 outline 3px + offset 2px → 向外 5px）。
+     左边缘与裁切边齐平 → 环整条被裁掉一半。实测（改前）：slack 左 0 / 右 3，
+     环向外 3px → 左侧裁掉 3px、右侧刚好贴边。
+     左右各留 max(--blur-pad, 环向外的宽度)：既修好裁切，又不吃掉滚动条轨道留白。
+     注：容器里的相册/排序控件已从 `<select>`（.select:focus）换成 `.selectmenu__trigger`
+     （.btn:focus-visible → 同样是 box-shadow 3px 向外），留白口径不变。 */
   padding-inline: max(var(--blur-pad), calc(var(--ring-w) + var(--ring-offset)));
 }
 .library__dates {
@@ -350,8 +353,10 @@
   color: var(--muted);
   min-width: 8ch;
 }
-.library__batch .select { width: auto; min-width: 9rem; }
-.library__batch .select--sm { height: var(--ctl-h-sm); font-size: var(--fs-ctl-sm); }
+/* 批量条的相册下拉（.selectmenu = .menu 的选择形态）：宽度按内容，不给它一个
+   能撑破批量条的自由宽度。小一档（--sm）与原来的 .select--sm 同高度同字号。 */
+.library__batch .selectmenu { width: auto; min-width: 9rem; }
+.library__batch .selectmenu__trigger--sm { height: var(--ctl-h-sm); font-size: var(--fs-ctl-sm); }
 
 /* 网格：沿用 components.css 的 .photo-grid，只调列数与间距。
    列数由 §9 的断点决定（≥1180 三列 / 900–1180 两列 / <900 单列），
@@ -631,7 +636,10 @@
      把"删除"顶到第三行）。用 order 换摆法，不动 DOM、不动处理器。 */
   .library__batch { border-radius: var(--r); }
   .library__batch > * { order: 1; }
-  .library__batch > .select { order: 2; flex: 1 1 100%; min-width: 0; }
+  .library__batch > .selectmenu { order: 2; flex: 1 1 100%; min-width: 0; }
+  /* 批量条是 flex 行：参与排布的必须是**直接子元素**。上面的 flex 属性落在 .selectmenu 上，
+     但它内部还有一层 .menu__wrap（inline-flex）也要跟着铺满，否则触发按钮只按内容宽度排。 */
+  .library__batch .menu__wrap { flex: 1 1 auto; min-width: 0; }
   .library__dates { grid-template-columns: minmax(0, 1fr); }
   .library__upload-foot { gap: var(--sp-2); }
   .library__upload-foot .upload__zone { flex: 1 1 100%; }

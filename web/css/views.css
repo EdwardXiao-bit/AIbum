@@ -37,6 +37,9 @@
   border-bottom: var(--bw) solid var(--line);
 }
 
+/* 顶栏品牌是全项目**仅两处**保留负字距的地方之一：紧的是拉丁 "AIbum"（西文展示字收紧
+   边距是常规做法），紧跟其后的 <small>智慧相册</small> 自带 --ls-label 正字距，不受影响。
+   另一处是自查页页头（styleguide.css 的 .top h1，同样以拉丁 "AIbum" 开头）。 */
 .topbar__brand {
   display: inline-flex;
   align-items: baseline;
@@ -128,7 +131,7 @@
   gap: var(--sp-4);
   padding: var(--sp-7);
 }
-.auth__card h2 { font-size: var(--fs-2xl); letter-spacing: var(--ls-tight); }
+.auth__card h2 { font-size: var(--fs-2xl); }
 .auth__sub { color: var(--muted); font-size: var(--fs-base); }
 .auth__buttons { display: flex; flex-direction: column; gap: var(--sp-2); }
 

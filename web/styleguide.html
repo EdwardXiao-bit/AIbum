@@ -10,6 +10,7 @@
      内联 script 标签会被浏览器拒绝执行，data-theme 就永远写不进去。
      这里的逻辑与 web/js/theme.js 共用同一份契约（aibum-theme / 六档取值）。 -->
 <script src="/static/js/theme-boot.js"></script>
+<link rel="stylesheet" href="/static/css/fonts.css">
 <link rel="stylesheet" href="/static/css/tokens.css">
 <link rel="stylesheet" href="/static/css/base.css">
 <link rel="stylesheet" href="/static/css/components.css">
@@ -175,11 +176,44 @@
   </section>
 
   <section>
-    <h2>2 · 字阶</h2>
+    <h2>2 · 字族 · 字阶 · 字重</h2>
     <p class="note">中文在 11.5–15px 区间最容易糊，所以每个字号都配了固定行高。所有字号必须来自 <code>--fs-*</code>。
       行高只有三档（<code>--lh-tight</code> 1.25 / <code>--lh-base</code> 1.6 / <code>--lh-loose</code> 1.75），
       按用途挑：大标题用 tight，正文与控件用 base，字距较大的角标用 loose——不是每个字号一档。</p>
     <div class="demo demo--col">
+      <span class="demo__label">字族（两套，各只有一个用途）</span>
+      <div class="type-row"><span class="tag">--font-sans</span><span class="fam-sans">记得画面，就能找到 · AIbum 2026</span></div>
+      <div class="type-row"><span class="tag">--font-serif</span><span class="fam-serif">记得画面，就能找到 · AIbum 2026</span></div>
+    </div>
+    <p class="note">
+      <b>--font-sans</b>：正文、按钮、表单、卡片标题，即"除页面级大标题之外的一切"。
+      首位是自托管的 <code>Noto Sans SC</code> <b>可变字体</b>（<code>/static/fonts/noto-sans-sc-vf.woff2</code>，
+      <code>@font-face</code> 见 <code>css/fonts.css</code>，<code>font-weight: 100 900</code>）。
+      后面那串 <code>system-ui / "Microsoft YaHei" / "PingFang SC"</code> 是字体未就绪（<code>font-display: swap</code>）
+      与加载失败时的后备。<br>
+      <b>--font-serif</b>：<b>只</b>用于页面级大标题（<code>.hero</code> —— 认证页、相册页、管理台页各一处，
+      全项目仅此三处）。衬线体<b>不自托管</b>，只写系统链
+      （<code>"Noto Serif SC", "Songti SC", SimSun, serif</code>），省 5.65 MB 仓库体积。
+      宋体在 12–15px 会明显发糊，所以正文、按钮、表单、卡片标题一律不用它。
+    </p>
+    <div class="demo demo--col">
+      <span class="demo__label">字重（可变字体带来的四个真字面）</span>
+      <div class="type-row"><span class="tag">--fw-normal 400</span><span class="ts-w-normal">记得画面，就能找到</span></div>
+      <div class="type-row"><span class="tag">--fw-medium 600</span><span class="ts-w-medium">记得画面，就能找到</span></div>
+      <div class="type-row"><span class="tag">--fw-bold 700</span><span class="ts-w-bold">记得画面，就能找到</span></div>
+      <div class="type-row"><span class="tag">--fw-black 800</span><span class="ts-w-black">记得画面，就能找到</span></div>
+    </div>
+    <p class="note">
+      这四行必须<b>看得出四种粗细</b>。改动前本机中文只有两个字面（<code>400=500</code> 渲染完全相同、
+      <code>600=700=800</code> 三者渲染也完全相同，逐档像素哈希证实，5 档只有 2 种渲染），
+      而样式表里 <code>--fw-medium</code> 用了 30 处、<code>--fw-black</code> 11 处、<code>--fw-bold</code> 8 处——
+      全都落进同一个 Bold，层次塌成一档。自托管可变字体之后 400/600/700/800 才是真实字重
+      （字体另有 500 一个字面，字阶里没有对应令牌，故未使用）。<br>
+      <b>中文标题不加负字距</b>：汉字是等宽全角，<code>--ls-tight</code>（-1.2px）会把字面挤掉、笔画粘连发糊。
+      它现在只用在顶栏品牌 "AIbum" 这一处西文展示字上。
+    </p>
+    <div class="demo demo--col">
+      <span class="demo__label">字阶（字号 + 行高 + 字重 + 字距成组出现）</span>
       <div class="type-row"><span class="tag">--fs-hero</span><span class="ts-hero">记得画面，就能找到</span></div>
       <div class="type-row"><span class="tag">--fs-2xl</span><span class="ts-2xl">我的照片</span></div>
       <div class="type-row"><span class="tag">--fs-xl</span><span class="ts-xl">照片详情</span></div>

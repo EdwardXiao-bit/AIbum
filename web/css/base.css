@@ -79,18 +79,22 @@ body { overflow-wrap: break-word; }
 
 /* --------------------------------------------------------------------------
    2) 字阶
+   --------------------------------------------------------------------------
+   中文标题**不做负字距**（本次改动清掉了 h1 / h2 / .hero 上的 --ls-tight -1.2px）：
+   汉字是等宽全角方块，字与字之间本来就没有西文那种"边距冗余"，-1.2px 在 28px 的字上
+   相当于把字面挤掉 4%，笔画会互相粘连、发糊。负字距只对西文展示字成立，
+   全项目仅两处例外，且都以拉丁 "AIbum" 开头：顶栏品牌（views.css 的 .topbar__brand）
+   与自查页页头（styleguide.css 的 .top h1）。
    -------------------------------------------------------------------------- */
 h1 {
   font-size: var(--fs-2xl);
   font-weight: var(--fw-black);
-  letter-spacing: var(--ls-tight);
   line-height: var(--lh-tight);
 }
 
 h2 {
   font-size: var(--fs-xl);
   font-weight: var(--fw-bold);
-  letter-spacing: var(--ls-tight);
   line-height: var(--lh-tight);
 }
 
@@ -120,10 +124,16 @@ code, kbd, samp, pre {
   font-size: var(--fs-sm);
 }
 
+/* 页面级大标题：**唯一**使用衬线体的地方（D8 方案 5）。
+   只挂在 .hero 上 —— app.html 的认证页 h1.hero.auth__title、
+   library.js 的 h1.hero.library__title、admin.js 的 h1.hero.admin__title
+   是全项目仅有的三处 .hero，等于"页面级大标题"的精确定义，不会外溢到卡片标题 / 区块标题。
+   字重仍是 --fw-black，宋体（本机 Noto Serif SC 可变）在大字号下有真实的 Black 字面；
+   正文 / 按钮 / 表单 / 卡片标题一律黑体不动 —— 宋体在 12–15px 会发糊。 */
 .hero {
+  font-family: var(--font-serif);
   font-size: var(--fs-hero);
   font-weight: var(--fw-black);
-  letter-spacing: var(--ls-tight);
   line-height: var(--lh-tight);
 }
 

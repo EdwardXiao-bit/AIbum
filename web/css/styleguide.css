@@ -25,12 +25,16 @@
   background: var(--glass); backdrop-filter: blur(14px);
   border-bottom: var(--bw) solid var(--line);
 }
+/* 页头标题以拉丁 "AIbum" 开头，收紧拉丁边距是常规做法 —— 属"负字距只给西文展示字"的例外。
+   （全项目只有两处这种例外：这里与 views.css 的 .topbar__brand。） */
 .top h1 { font-size: var(--fs-lg); margin: 0; letter-spacing: -.4px; }
 .top .sub { color: var(--faint); font-size: var(--fs-sm); }
 .wrap { max-width: 1180px; margin: 0 auto; padding: var(--sp-7) var(--sp-7) 120px; }
 section { margin-bottom: var(--sp-8); }
+/* 自查页自己的小节标题是中文（"圆角 · 阴影 · 间距"…），同样不做负字距 ——
+   否则这一页会一边写着"中文标题不加负字距"，一边自己的标题就压着字（F15：指南与实现不许分歧）。 */
 section > h2 {
-  font-size: var(--fs-xl); letter-spacing: -.6px; margin: 0 0 var(--sp-2);
+  font-size: var(--fs-xl); margin: 0 0 var(--sp-2);
   padding-bottom: var(--sp-3); border-bottom: var(--bw) solid var(--line);
 }
 section > .note { color: var(--muted); font-size: var(--fs-sm); margin: 0 0 var(--sp-5); }
@@ -59,6 +63,18 @@ section > .note { color: var(--muted); font-size: var(--fs-sm); margin: 0 0 var(
 .swatch .meta code { color: var(--faint); }
 .type-row { display: flex; align-items: baseline; gap: var(--sp-4); width: 100%; padding: 6px 0; border-bottom: var(--bw) dashed var(--line-soft); }
 .type-row .tag { flex: none; width: 130px; font-size: var(--fs-xs); color: var(--faint); }
+/* --- 字族与字重 demo（D8 方案 5）---
+   两套字族：.fam-sans / .fam-serif 各自套上真实令牌取值，肉眼可辨。
+   四个字重：分别套 --fw-normal / --fw-medium / --fw-bold / --fw-black。
+   为什么这一节必须在自查页上"看得见"：改动前本机中文只有两个字面
+   （400=500、600=700=800），这四行会渲染成只有两种样子；自托管可变字体之后
+   才是四个真字面。指南如果不能一眼验证这件事，就等于没落实。 */
+.fam-sans  { font-family: var(--font-sans);  font-size: var(--fs-xl); }
+.fam-serif { font-family: var(--font-serif); font-size: var(--fs-xl); }
+.ts-w-normal { font-family: var(--font-sans); font-size: var(--fs-xl); font-weight: var(--fw-normal); }
+.ts-w-medium { font-family: var(--font-sans); font-size: var(--fs-xl); font-weight: var(--fw-medium); }
+.ts-w-bold   { font-family: var(--font-sans); font-size: var(--fs-xl); font-weight: var(--fw-bold); }
+.ts-w-black  { font-family: var(--font-sans); font-size: var(--fs-xl); font-weight: var(--fw-black); }
 .radius-row { display: flex; gap: var(--sp-4); flex-wrap: wrap; }
 .radius-box { width: 84px; height: 68px; background: var(--sunken); border: var(--bw) solid var(--line); display: grid; place-items: center; font-size: var(--fs-xs); color: var(--muted); text-align: center; }
 .shadow-row { display: flex; gap: var(--sp-5); flex-wrap: wrap; }
@@ -154,8 +170,10 @@ section > .note { color: var(--muted); font-size: var(--fs-sm); margin: 0 0 var(
 
 /* --- 字阶 demo：字号 + 行高 + 字重 + 字距一起打包，避免 HTML 里写四条声明 ---
    行高只有三档令牌，按用途挑（不是每个字号一档）：大标题 tight、正文与控件 base、角标 loose。
-   这里显式写出来，是为了让"每个字号都配了固定行高"这句话在自查页上看得见、可验证。 */
-.ts-hero { font-size: var(--fs-hero); line-height: var(--lh-tight); font-weight: var(--fw-black); letter-spacing: var(--ls-tight); }
+   这里显式写出来，是为了让"每个字号都配了固定行高"这句话在自查页上看得见、可验证。
+   .ts-hero 必须与 base.css 的 .hero **逐条一致**（F15 的规矩：指南与实现不许分歧）：
+   --fs-hero + --fw-black + --lh-tight + 宋体字族 + 不做负字距（中文不做负字距）。 */
+.ts-hero { font-family: var(--font-serif); font-size: var(--fs-hero); line-height: var(--lh-tight); font-weight: var(--fw-black); }
 .ts-2xl { font-size: var(--fs-2xl); line-height: var(--lh-tight); font-weight: var(--fw-black); }
 .ts-xl { font-size: var(--fs-xl); line-height: var(--lh-tight); font-weight: var(--fw-bold); }
 .ts-lg { font-size: var(--fs-lg); line-height: var(--lh-tight); font-weight: var(--fw-medium); }

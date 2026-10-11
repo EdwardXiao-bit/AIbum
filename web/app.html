@@ -14,7 +14,10 @@
        契约与 web/js/theme.js 的 INLINE_THEME_SCRIPT 一致。 -->
   <script src="/static/js/theme-boot.js"></script>
 
-  <!-- 设计系统（阶段 2 定稿）：令牌 → 基础层 → 组件层 → 视图层。
+  <!-- 设计系统（阶段 2 定稿）：字族 → 令牌 → 基础层 → 组件层 → 视图层。
+       fonts.css 放最前：它只有 @font-face（字族的二进制来源），tokens.css 的 --font-sans
+       指向的 "Noto Sans SC" 就由它声明。分开两个文件是为了让 tokens.css 保持"只有值"，
+       详见 web/css/fonts.css 的头注释。
        绝对路径 /static/...：web/ 被挂在 /static，页面本身还会被挂在 / 与 /admin 下，
        相对路径在 /admin 下会解析错位置。
        library.css 是阶段 3.2（相册主界面）的视图样式，全部选择器都挂在 .library 下。
@@ -22,6 +25,7 @@
        admin.css 是阶段 3.5（管理后台）的视图样式，全部选择器都挂在 .admin 下。
        mobile.css 是阶段 3.6（窄屏适配）的**跨视图覆盖层**，必须最后加载：
        它只覆盖设计系统为桌面定的密度（触控目标 / 顶栏收纳 / 窄屏留白）。 -->
+  <link rel="stylesheet" href="/static/css/fonts.css">
   <link rel="stylesheet" href="/static/css/tokens.css">
   <link rel="stylesheet" href="/static/css/base.css">
   <link rel="stylesheet" href="/static/css/components.css">

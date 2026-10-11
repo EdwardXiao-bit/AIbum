@@ -30,8 +30,20 @@
    1) 尺度类令牌（跨主题不变）
    -------------------------------------------------------------------------- */
 :root {
-  /* 字族 */
-  --font-sans: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+  /* 字族（D8 方案 5：正文黑体 + 仅页面级大标题换宋体）
+     --font-sans 第一位是**自托管可变字体** "Noto Sans SC"（@font-face 见 css/fonts.css）。
+     为什么必须自托管而不是只写系统链：本机实测中文只有两个字面 —— 400 与 500 渲染完全相同、
+     600/700/800 三者渲染也完全相同（逐档像素哈希证实，5 档只有 2 种渲染）。而样式表里
+     --fw-medium(600) 用了 30 处、--fw-black(800) 11 处、--fw-bold(700) 8 处，全部落进同一个
+     Bold，层次塌成一档。可变字体带来 100–900 全字重的**真实**字面，这 49 处才真的有区别。
+     后面那串系统链是字体未就绪（font-display: swap 期间）与字体加载失败时的后备。
+     Latin 也走 Noto Sans SC 的拉丁字形：中英混排时字面比例一致，不会出现"英文换了个风格"。 */
+  --font-sans: "Noto Sans SC", system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+  /* 衬线体**不自托管**（决策：省 5.65 MB 仓库体积），只写系统链，且只用于页面级大标题
+     （.hero：相册页「我的照片」/ 认证页「记得画面，就能找到。」/ 管理台页标题）。
+     本机命中 Noto Serif SC（可变）；其他机器退到 Songti SC / SimSun，形态仍是宋体。
+     正文、按钮、表单、卡片标题一律不用它 —— 宋体在 12–15px 会明显发糊。 */
+  --font-serif: "Noto Serif SC", "Songti SC", SimSun, serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Courier New", monospace;
 
   /* 字号 */
@@ -61,7 +73,12 @@
   --fw-bold:   700;
   --fw-black:  800;
 
-  /* 字距 */
+  /* 字距
+     --ls-tight 只对**西文展示字**成立（收紧拉丁字母的边距冗余）。
+     汉字是等宽全角，负字距会把字面挤掉、笔画粘连发糊，所以中文标题一律不加 ——
+     本次已从 h1 / h2 / .hero / .auth__card h2 / .library__side-title /
+     .admin__stat-value / .admin__users-title 七处清掉。全项目唯一的用法是
+     顶栏品牌 "AIbum"（views.css 的 .topbar__brand）。 */
   --ls-tight:  -1.2px;
   --ls-normal: 0;
   --ls-wide:   2px;

@@ -229,7 +229,6 @@
 .library__side-title {
   font-size: var(--fs-lg);
   font-weight: var(--fw-black);
-  letter-spacing: var(--ls-tight);
   margin: 0;
 }
 .library__filter-count {

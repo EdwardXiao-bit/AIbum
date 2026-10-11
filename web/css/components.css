@@ -537,7 +537,9 @@
   padding: var(--sp-6);
 }
 .dialog__head { display: flex; align-items: flex-start; gap: var(--sp-4); margin-bottom: var(--sp-5); }
-.dialog__title { font-size: var(--fs-xl); font-weight: var(--fw-black); letter-spacing: -.4px; }
+/* 中文标题不做负字距（理由见 base.css 的"字阶"一节）：这里原先是硬编码 -.4px，
+   既压糊笔画又绕过了令牌体系。对话框标题是中文（"照片详情" / "上传照片" / "账户设置"…）。 */
+.dialog__title { font-size: var(--fs-xl); font-weight: var(--fw-black); }
 .dialog__sub { font-size: var(--fs-base); color: var(--muted); }
 .dialog__close { margin-left: auto; }
 .dialog__foot { display: flex; gap: var(--sp-2); justify-content: flex-end; margin-top: var(--sp-6); }

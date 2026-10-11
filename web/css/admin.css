@@ -77,7 +77,6 @@
 .admin__stat-value {
   font-size: var(--fs-2xl);
   font-weight: var(--fw-black);
-  letter-spacing: var(--ls-tight);
   line-height: var(--lh-tight);
   color: var(--text);
   /* 数字等宽：加载完成后逐位变化不会让卡片宽度跳动 */
@@ -119,7 +118,6 @@
   margin-right: auto;
   font-size: var(--fs-lg);
   font-weight: var(--fw-black);
-  letter-spacing: var(--ls-tight);
 }
 
 .admin__toolbar .input {

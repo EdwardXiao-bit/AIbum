@@ -447,6 +447,25 @@
   background: var(--accent); border-color: var(--accent); color: var(--on-accent);
 }
 .photo__sel[disabled] { opacity: var(--btn-disabled-opacity); cursor: not-allowed; }
+/* 命中区比视觉大：看着仍是 --sel-size（22px）的方块，点到的是 --touch（44px）的方块。
+   ::before **不参与 elementFromPoint 的返回值**（命中的仍是按钮本身），
+   所以"看得见多大"与"点得到多大"解耦 —— 视觉零变化，手指/鼠标的实际目标翻倍。
+
+   F9 ② 之前这条只在窄屏（mobile.css 的 ≤899 块）生效，桌面实测命中区 == 视觉区 22×22
+   （与全站其它交互控件 ≥44 的取向不一致）。现在对所有宽度一致生效。
+
+   选择器必须带 `.photo`：批量条上的"全选"也复用了 .photo__sel，但它在桌面是
+   position: static（见 library.css 的 .library__select-all），居中定位的 ::before
+   会去找别的包含块，跑到意料之外的位置上去。 */
+.photo .photo__sel::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--touch);
+  height: var(--touch);
+  transform: translate(-50%, -50%);
+}
 .photo__stat { position: absolute; top: var(--side-gap); right: var(--side-gap); z-index: 2; }
 .photo--error { border-color: var(--danger); }
 
@@ -543,6 +562,26 @@
 .dialog__sub { font-size: var(--fs-base); color: var(--muted); }
 .dialog__close { margin-left: auto; }
 .dialog__foot { display: flex; gap: var(--sp-2); justify-content: flex-end; margin-top: var(--sp-6); }
+
+/* 对话框里的"区域"（F9 ① 的「外观」）：与上面的表单分成两段，但不新开一个对话框（D1）。
+   它是 #password-form 的**兄弟**节点，不在表单内 —— 表单的 reset() 会把范围内的控件
+   打回 HTML 默认值，主题选择不能被它牵着走（见 app.html 里的注释）。 */
+.dialog__section {
+  margin-top: var(--sp-5);
+  padding-top: var(--sp-4);
+  border-top: var(--bw) solid var(--line-soft);
+}
+.dialog__section-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
+}
+.dialog__section-hint { font-size: var(--fs-xs); color: var(--faint); }
+/* 六档并排：窄对话框里换行，不许把对话框撑出横向滚动 */
+.dialog__section .seg { flex-wrap: wrap; gap: var(--mark-gap-xs); }
+.dialog__section .seg button { white-space: nowrap; }
 
 .drawer {
   position: fixed; top: 0; right: 0; bottom: 0;

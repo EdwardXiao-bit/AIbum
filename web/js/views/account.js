@@ -5,7 +5,7 @@
 
      #dialog-recovery  恢复码（1.3 注册后 / 1.7 轮换后 / 1.8 重置后都要展示）
      #dialog-forgot    忘记密码（1.8）
-     #dialog-security  账户安全：改密码 + 轮换恢复码（1.6 / 1.7）
+     #dialog-security  账户安全：改密码 + 轮换恢复码（1.6 / 1.7）+ **外观（六档主题，D1）**
 
    逐条对照 docs/前端-行为清单.md：
      1.6 修改密码 —— POST /auth/password {current_password,new_password}
@@ -24,6 +24,7 @@
 
 import { api } from '../api.js';
 import * as store from '../store.js';
+import * as theme from '../theme.js';
 
 /** 恢复码文件名（1.9）。 */
 export const RECOVERY_FILE_NAME = 'aibum-recovery-code.txt';
@@ -94,10 +95,45 @@ export function createAccountOverlays(options) {
 
   $('download-code').addEventListener('click', () => downloadRecoveryCode(recoveryCode.value));
 
+  /* ---------- D1 外观：六档主题入口 ----------
+     位置在 #dialog-security 里的 .dialog__section[data-role="appearance"]（D1 已拍板：
+     主题入口放这里，不新开对话框）。**不另造一套主题逻辑**：档位顺序、文案、持久化
+     全部用 theme.js —— THEME_CHOICES / THEME_LABELS / setTheme（setTheme 内部写
+     localStorage 的 'aibum-theme'，并把 data-theme + data-choice 写到 <html>）。
+     这里只做两件事：把六个按钮建出来、把当前档位高亮出来。 */
+  const themeSeg = doc.querySelector('#dialog-security [data-role="appearance"] .seg');
+  const themeButtons = new Map();
+
+  /** 用 data-choice 高亮当前档位（theme.js 的契约：data-choice = 用户的选择，可能是 auto）。 */
+  function syncThemeButtons() {
+    const current = doc.documentElement.getAttribute('data-choice') || theme.readChoice();
+    for (const [choice, button] of themeButtons) {
+      button.setAttribute('aria-pressed', choice === current ? 'true' : 'false');
+    }
+  }
+
+  if (themeSeg) {
+    for (const choice of theme.THEME_CHOICES) {
+      const button = doc.createElement('button');
+      button.type = 'button';
+      button.dataset.themeChoice = choice;
+      button.setAttribute('aria-pressed', 'false');
+      button.textContent = theme.THEME_LABELS[choice];
+      button.addEventListener('click', () => {
+        theme.setTheme(choice);        // data-theme 立即变 + 落 localStorage（刷新后仍在）
+        syncThemeButtons();
+      });
+      themeSeg.append(button);
+      themeButtons.set(choice, button);
+    }
+    syncThemeButtons();
+  }
+
   /* ---------- 1.6 / 1.7 账户安全 ---------- */
 
   function openSecurity() {
     passwordForm.reset();
+    syncThemeButtons();          // 每次打开都对齐一次当前档位（可能在别处被改过）
     modals.open(security);
     return security;
   }
@@ -166,7 +202,8 @@ export function createAccountOverlays(options) {
     openForgot,
     closeAll: () => modals.closeAll(),
     downloadRecoveryCode,
-    elements: { recovery, security, forgot, recoveryCode },
+    syncThemeButtons,
+    elements: { recovery, security, forgot, recoveryCode, themeSeg },
   };
 }
 

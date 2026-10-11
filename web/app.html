@@ -96,6 +96,18 @@
         <button class="btn btn--ghost" type="button" data-close>取消</button>
       </div>
     </form>
+    <!-- 外观（F9 ① / 决策 D1：主题入口就放在「账户安全」里，**不是**新开一个对话框）。
+         位置在 </form> **之外**是必须的：openSecurity() 会 passwordForm.reset()，
+         若这排按钮在表单内，reset() 会把选择打回 HTML 默认值，而 localStorage 里还是原来那档
+         —— 界面与实际主题就此分叉。六档按钮由 js/views/account.js 按 theme.js 的
+         THEME_CHOICES / THEME_LABELS 建（档位与文案只有那一份真相）。 -->
+    <div class="dialog__section" data-role="appearance">
+      <div class="dialog__section-head">
+        <span class="label" id="appearance-label">外观</span>
+        <span class="dialog__section-hint">只影响这台设备上的显示</span>
+      </div>
+      <div class="seg" id="appearance-themes" role="group" aria-labelledby="appearance-label"></div>
+    </div>
   </div>
 
   <div class="dialog" id="dialog-forgot" role="dialog" aria-modal="true" aria-labelledby="forgot-title" hidden>

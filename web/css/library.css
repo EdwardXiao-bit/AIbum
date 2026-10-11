@@ -242,7 +242,13 @@
   flex-direction: column;
   gap: var(--sp-4);
   overflow: auto;
-  padding-right: var(--blur-pad);
+  /* F9 ⑥（真 bug，清单 ⑥）：原来 padding-left: 0 / padding-right: var(--blur-pad)=3px。
+     overflow: auto 会在**padding box** 边界裁切，而焦点环是向外画的
+     （.select:focus 的 box-shadow 0 0 0 3px → 向外 3px；.chip 之类走 :focus-visible 的
+     outline 3px + offset 2px → 向外 5px）。左边缘与裁切边齐平 → 环整条被裁掉一半。
+     实测（改前）：slack 左 0 / 右 3，环向外 3px → 左侧裁掉 3px、右侧刚好贴边。
+     左右各留 max(--blur-pad, 环向外的宽度)：既修好裁切，又不吃掉滚动条轨道留白。 */
+  padding-inline: max(var(--blur-pad), calc(var(--ring-w) + var(--ring-offset)));
 }
 .library__dates {
   display: grid;
@@ -276,6 +282,10 @@
   gap: var(--mark-gap);
   max-height: 34vh;
   overflow: auto;
+  /* F9 ⑥ 的同一处病灶：这是**容器里套着的第二个滚动容器**，标签芯片是
+     <button class="chip">，走 :focus-visible 的 outline（3px + offset 2px = 向外 5px）。
+     不给它留内边距，每行第一个/最后一个标签的环就被它自己的 overflow 裁掉。 */
+  padding: calc(var(--ring-w) + var(--ring-offset));
 }
 .library__tag {
   max-width: 100%;
@@ -516,13 +526,14 @@
 [data-role="upload-dialog-hint"][data-state="warn"] { color: var(--warn); }
 
 /* --------------------------------------------------------------------------
-   9) 断点（阶段 3.6 · F8 / 决策台账 D3）
+   9) 断点（阶段 3.6 · F8 / 决策台账 D3；F9 补了平板那一档）
    --------------------------------------------------------------------------
-   三档，与 tokens.css 末尾记的断点注释一致：
+   四档，与 tokens.css 的断点参考（--bp-sm 640 / --bp-md 900 / --bp-lg 1180）一致：
 
-     ≥1180px      结果网格 3 列，筛选侧栏常驻（左栏）
-     900–1180px   结果网格 2 列，筛选侧栏仍常驻
-     <900px       结果网格 1 列，筛选侧栏收成**从左侧滑出的抽屉**
+     ≥1180px       结果网格 3 列，筛选侧栏常驻（左栏）
+     900–1179px    结果网格 2 列，筛选侧栏仍常驻
+     641–899px     结果网格 2 列（F9 ③ 补的平板档），筛选侧栏收成**从左侧滑出的抽屉**
+     ≤640px        结果网格 1 列，筛选侧栏同样是抽屉
 
    窄屏只是**换摆法**，不减少功能：六个筛选维度（相册 / 地点 / 起止日期 /
    只看收藏 / 排序 / 标签云）、新建相册、清空筛选、清空标签都在同一个 DOM 里，
@@ -580,8 +591,13 @@
   .library__side-close { display: inline-flex; margin-left: var(--sp-2); }
   /* 右侧留 8px：开关的 44px 命中区（比 38px 的开关宽 3px）不能被
      .library__side-body 的 overflow: auto 裁掉 —— 实测过：裁掉后点最右侧
-     落在抽屉本身而不是开关上。留白看不见，命中区是真的。 */
-  .library__side-body { padding-right: var(--sp-2); overscroll-behavior: contain; }
+     落在抽屉本身而不是开关上。留白看不见，命中区是真的。
+     F9 ⑥：**两侧都要留**。只留右边的话，同一条 overflow: auto 会把焦点环在左边裁掉
+     （见上面 .library__side-body 的注释）；max() 里的 --sp-2 就是原来那 8px。 */
+  .library__side-body {
+    padding-inline: max(var(--sp-2), calc(var(--ring-w) + var(--ring-offset)));
+    overscroll-behavior: contain;
+  }
   /* 抽屉里的标签云不再吃视口高度百分比，改由抽屉自己滚动 */
   .library__tagcloud { max-height: none; overflow: visible; }
 
@@ -629,3 +645,14 @@
   to   { transform: none; }
 }
 
+/* --------------------------------------------------------------------------
+   10) F9 ③：641–899 的平板补一档 2 列（清单 ④）
+   --------------------------------------------------------------------------
+   ≤899 那一档本来是给手机写的单列（手机竖屏一张占满整行是对的），但 798 宽的平板
+   也落进这一档 → 一行只放一张、横向浪费明显、滚动距离长。
+   放在 ≤899 块**之后**：两条规则特异性相同，后者胜，不需要 !important。
+   640 及以下仍是单列（手机），边界按"641 起算平板"取。
+   -------------------------------------------------------------------------- */
+@media (min-width: 641px) and (max-width: 899px) {
+  .library__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

@@ -1,0 +1,186 @@
+/* ==========================================================================
+   AIbum · 管理后台视图样式  web/css/admin.css
+   --------------------------------------------------------------------------
+   阶段 3.5（管理后台）。
+
+   规矩（与 tokens / base / components / views 一致）：
+     - **只引用令牌**，不写死颜色 / 圆角 / 阴影 / 间距 / 字号（F2 已定：硬编码色值 0）
+     - 组件长什么样由 css/components.css 决定（.table / .badge / .btn / .input / .select /
+       .dialog / .panel / .grid），本文件只负责"摆在哪、占多宽"
+     - 全部选择器收在 `.admin` 下，和 views/library.css、views/detail.css 一样，
+       不往全局命名空间里再丢类（否则视图一多就会互相踩）
+     - 禁止内联 style（app/main.py:180 的 CSP 无 unsafe-inline / unsafe-hashes）：
+       动态样式一律在 JS 里切类名或 data-* 属性
+
+   行为清单对应：8.5 统计卡片 · 8.6 用户表 · 8.7 筛选工具条 · 8.8 启停按钮 · 8.9 占位「—」
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1) 骨架：标题区 / 统计区 / 服务行 / 用户表面板
+   -------------------------------------------------------------------------- */
+
+.admin {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+}
+
+.admin__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--sp-4);
+}
+
+.admin__head-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.admin__title { margin: 0; }
+.admin__lead { margin: 0; }
+
+/* --------------------------------------------------------------------------
+   2) 8.5 统计卡片
+   --------------------------------------------------------------------------
+   复用 base.css 的 .grid（自适应栅格，列宽下限走 --col），只在这里改密度：
+   管理台是 4 张窄卡，比照片网格（4×--sp-9）窄得多。
+   -------------------------------------------------------------------------- */
+
+.admin__stats {
+  --col: calc(var(--sp-9) * 3);
+  --gap: var(--sp-4);
+}
+
+.admin__stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-5);
+  background: var(--elev);
+  border: var(--bw) solid var(--line);
+  border-radius: var(--r);
+  box-shadow: var(--sh-1);
+}
+
+.admin__stat-label {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.admin__stat-value {
+  font-size: var(--fs-2xl);
+  font-weight: var(--fw-black);
+  letter-spacing: var(--ls-tight);
+  line-height: var(--lh-tight);
+  color: var(--text);
+  /* 数字等宽：加载完成后逐位变化不会让卡片宽度跳动 */
+  font-variant-numeric: tabular-nums;
+}
+
+/* 模型状态 + 照片存储（8.5 的后两项） */
+.admin__service {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-4);
+  color: var(--muted);
+  font-size: var(--fs-ctl);
+}
+
+/* 照片存储的数值等宽：不至于因为位数变化而左右跳动 */
+.admin__storage { font-variant-numeric: tabular-nums; }
+
+/* --------------------------------------------------------------------------
+   3) 8.6 / 8.7 用户表面板
+   -------------------------------------------------------------------------- */
+
+.admin__users {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.admin__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+/* 标题吃掉剩余空间 → 搜索框与状态下拉被推到右端；窄屏换行后它们自然落在第二行 */
+.admin__users-title {
+  margin-right: auto;
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-black);
+  letter-spacing: var(--ls-tight);
+}
+
+.admin__toolbar .input {
+  width: calc(var(--sp-9) * 4);   /* 224px：够看 20 字符的用户名（行为清单 §11 的上限） */
+  max-width: 100%;
+}
+
+.admin__toolbar .select { width: auto; }
+
+.admin__note {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+
+/* 5 列在窄屏不该被挤成一列文字：给表格一个下限，让它在这个容器里横向滚动 */
+.admin__table-scroll {
+  overflow-x: auto;
+}
+.admin__table { min-width: calc(var(--sp-9) * 10); }
+.admin__table th:first-child,
+.admin__table td:first-child { padding-left: 0; }
+.admin__table th:last-child,
+.admin__table td:last-child { padding-right: 0; }
+
+/* 用户名可能很长，允许在任意位置换行，别把表格撑破 */
+.admin__user { overflow-wrap: anywhere; }
+.admin__date { white-space: nowrap; color: var(--muted); }
+.admin__quota {
+  white-space: nowrap;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 8.9：管理员行的操作列是「—」，比正文淡一档，一眼看出"这里没有按钮" */
+.admin__dash { color: var(--faint); }
+
+.admin__empty {
+  padding: var(--sp-6) var(--sp-5);
+  text-align: center;
+  color: var(--muted);
+  font-size: var(--fs-base);
+}
+
+/* 8.8 确认框的正文（对话框外壳由 components.css §10 提供，这里只给一个行宽上限） */
+.admin__confirm-text {
+  color: var(--text);
+  line-height: var(--lh-base);
+  max-width: var(--hint-max-w);
+}
+
+/* --------------------------------------------------------------------------
+   4) 窄屏（行为清单 / 决策台账 D3：桌面为设计基准，窄屏自适应且功能不减少）
+   --------------------------------------------------------------------------
+   统计卡片靠 .grid 的 auto-fill 自己降列；工具条的搜索框改为整行宽；
+   确认框的两个按钮在窄屏堆叠（不然"确定停用"会被挤到屏幕外）。
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 900px) {
+  .admin__head { align-items: flex-start; }
+  .admin__toolbar .input { width: 100%; }
+  .admin__toolbar .select { width: 100%; }
+  .admin__confirm-text + .dialog__foot { flex-direction: column-reverse; }
+  .admin__confirm-text + .dialog__foot .btn { width: 100%; }
+}

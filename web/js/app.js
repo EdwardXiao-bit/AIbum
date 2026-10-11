@@ -9,6 +9,7 @@
      app.js（本文件）应用外壳：顶栏、视图挂载、浮层、登出（1.5）
      views/auth.js  认证视图（1.1 - 1.4、1.10）
      views/account.js 账户浮层（1.6 - 1.9）
+     views/admin.js  管理后台（8.5 - 8.9 + 9.4 不轮询）：#/admin 与 pathname /admin 两条入口都落到它
      views/library.js 相册主界面（第 2 / 3 / 5 节 + 第 9 节轮询）
      views/detail.js  照片详情**抽屉**（第 6 节）—— 不是并列视图，而是叠在主界面之上的浮层：
                       store.view === 'photo' 时主界面仍然挂着（见下面的 activeView）。
@@ -32,9 +33,9 @@ import { createModals } from './components/modal.js';
 import { bindToast } from './components/toast.js';
 import { createAccountOverlays } from './views/account.js';
 import { createAuthView } from './views/auth.js';
+import { createAdminView } from './views/admin.js';
 import { createDetailView } from './views/detail.js';
 import { createLibraryView } from './views/library.js';
-import { PLACEHOLDERS, createPlaceholderView } from './views/placeholder.js';
 
 /** 取节点，缺了就立刻报错（缺节点是最容易静默失效的一类 bug）。 */
 function must(id) {
@@ -82,11 +83,18 @@ const detailView = createDetailView({
   onRetried: () => libraryView.refreshAll(),
 });
 
-/** store.view → 视图。照片详情不是这里的一个条目（见 activeView）；管理后台归 F7。 */
+/**
+ * 管理后台（第 8 节 8.5 - 8.9）。它是**并列视图**（不是浮层）：store.view === 'admin' 时
+ * 主界面卸载、后台挂上 —— 这样 9.4「管理台不轮询」是天然成立的（相册主界面的
+ * 4 秒健康轮询在 unmount 里被清掉），不需要在轮询里再判一次入口。
+ */
+const adminView = createAdminView({ modals });
+
+/** store.view → 视图。照片详情不是这里的一个条目（见 activeView）。 */
 const views = {
   login: authView,
   library: libraryView,
-  admin: createPlaceholderView(PLACEHOLDERS.admin),
+  admin: adminView,
 };
 
 /**
@@ -206,7 +214,7 @@ try {
 // 验收钩子（阶段 1 的 next.html 用的是同一套命名）。正式视图不依赖它。
 window.__aibum = {
   api, store, router, theme, main,
-  modals, overlays, authView, libraryView, detailView, views,
+  modals, overlays, authView, libraryView, detailView, adminView, views,
   get bootResult() { return bootResult; },
   get bootError() { return bootError; },
 };

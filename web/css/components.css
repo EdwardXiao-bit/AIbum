@@ -1,4 +1,4 @@
-﻿/* ==========================================================================
+/* ==========================================================================
    AIbum · 组件层  web/css/components.css
    --------------------------------------------------------------------------
    只依赖 tokens.css 的令牌 + base.css 的 reset，不假设任何页面结构。
@@ -84,6 +84,9 @@
   font-size: var(--fs-ctl);
   line-height: 1;
   white-space: nowrap;
+  /* 必须是 none：.btn 也会用在 <a> 上（顶栏的"我的相册"、详情里的"下载原图"），
+     继承下来的下划线会让"按钮"看起来像正文链接。F7 截图里一眼可见。 */
+  text-decoration: none;
   cursor: pointer;
   box-shadow: var(--sh-1);
   transition: border-color var(--dur) var(--ease),
@@ -510,7 +513,15 @@
   position: fixed; inset: 0;
   background: color-mix(in srgb, var(--scrim) calc(var(--scrim-op) * 100%), transparent);
   backdrop-filter: blur(var(--blur-sm));
-  z-index: var(--z-dialog);
+  /* 必须**严格低于** .dialog 一层（而仍高于 .drawer = --z-drawer）：
+     两者原本都用 --z-dialog，于是谁在上面由「DOM 里谁靠后」决定 ——
+     而 #scrim 是 app.html 里 <main> 之后、body 的直接子节点，
+     凡是被视图 append 进 <main>（#view-root）里的 .dialog 就都跑到遮罩**下面**，
+     点按钮时命中的是遮罩：表现为"点确定没反应，弹窗自己关了"。
+     F7 验收实测到这一点（elementFromPoint 命中 DIV#scrim），此前用
+     "弹窗关了 + 没发写请求"当断言，正好是**假通过**。
+     用 calc 而不是新写一个魔法数：语义仍是"遮罩贴在对话框那一层之下"。 */
+  z-index: calc(var(--z-dialog) - 1);
 }
 
 .dialog {
